@@ -1,0 +1,259 @@
+'use client';
+import { useState, useEffect } from 'react';
+
+export default function Transactions() {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Wizard state
+  const [showModal, setShowModal] = useState(false);
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    type: '',
+    category: '',
+    amount: '',
+    description: ''
+  });
+
+  const [quickAmounts, setQuickAmounts] = useState([10000, 20000, 50000, 100000, 500000]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('bajetkuQuickAmounts');
+    if (saved) {
+      try { setQuickAmounts(JSON.parse(saved)); } catch (e) {}
+    }
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/transactions');
+      const json = await res.json();
+      if (json.error) setError(json.error);
+      else setTransactions(json.data || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const openWizard = () => {
+    setFormData({ date: new Date().toISOString().split('T')[0], type: '', category: '', amount: '', description: '' });
+    setStep(1);
+    setShowModal(true);
+  };
+
+  const handleTypeSelect = (type) => {
+    setFormData({ ...formData, type });
+    setStep(2);
+  };
+
+  const handleCategorySelect = (category) => {
+    setFormData({ ...formData, category });
+    setStep(3);
+  };
+
+  const handleAmountChange = (e) => {
+    // Remove all non-digits
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (!rawValue) {
+      setFormData({...formData, amount: ''});
+      return;
+    }
+    // Add thousand separator dots
+    const formatted = new Intl.NumberFormat('id-ID').format(Number(rawValue));
+    setFormData({...formData, amount: formatted});
+  };
+
+  const handleAddCustomAmount = () => {
+    const amtStr = prompt('Enter a new amount template (e.g. 75000):');
+    const amtNum = Number(amtStr);
+    if (amtNum && !isNaN(amtNum)) {
+      const newAmounts = [...quickAmounts, amtNum].sort((a,b) => a - b);
+      setQuickAmounts(newAmounts);
+      localStorage.setItem('bajetkuQuickAmounts', JSON.stringify(newAmounts));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    
+    // Convert formatted string (e.g. "10.000") back to pure number (10000) for the API
+    const rawAmount = Number(String(formData.amount).replace(/\./g, ''));
+    
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, amount: rawAmount })
+      });
+      const json = await res.json();
+      if (json.error) alert('Error: ' + json.error);
+      else {
+        setShowModal(false);
+        fetchTransactions();
+      }
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
+  };
+
+  const expenseCategories = ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Other'];
+  const incomeCategories = ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'];
+  const categories = formData.type === 'Expense' ? expenseCategories : incomeCategories;
+
+  return (
+    <div>
+      <h1 style={{marginBottom: '1.5rem'}}>Transactions</h1>
+
+      {loading && !transactions.length ? (
+        <div className="loading-container"><div className="spinner"></div></div>
+      ) : error ? (
+        <div className="card"><p style={{color: 'var(--danger-color)'}}>{error}</p></div>
+      ) : (
+        <div style={{marginBottom: '5rem'}}>
+          {transactions.length === 0 ? (
+            <p style={{color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem 0'}}>No transactions found.</p>
+          ) : (
+            transactions.map((tx) => (
+              <div key={tx.id} className="card" style={{padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <div>
+                  <strong style={{display: 'block', fontSize: '1rem'}}>{tx.category}</strong>
+                  <span style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>{tx.date} {tx.description ? `• ${tx.description}` : ''}</span>
+                </div>
+                <div style={{fontWeight: '600', color: tx.type === 'Expense' ? 'var(--text-primary)' : 'var(--success-color)'}}>
+                  {tx.type === 'Expense' ? '-' : '+'}{formatCurrency(tx.amount)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Floating Action Button */}
+      <button className="fab" onClick={openWizard}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+
+      {/* Multi-step Wizard Overlay */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{step === 1 ? 'New Transaction' : step === 2 ? 'Select Category' : 'Enter Details'}</h2>
+              <button className="close-btn" onClick={() => setShowModal(false)}>&times;</button>
+            </div>
+          
+          {step === 1 && (
+            <div className="wizard-step" style={{textAlign: 'center', marginTop: '2rem'}}>
+              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>What kind of transaction?</h2>
+              <p style={{color: 'var(--text-secondary)'}}>Choose the type to continue.</p>
+              <div className="big-btn-container">
+                <button className="big-btn expense-btn" onClick={() => handleTypeSelect('Expense')}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+                  Expense
+                </button>
+                <button className="big-btn income-btn" onClick={() => handleTypeSelect('Income')}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                  Income
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="wizard-step">
+              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(1)}>← Back</button>
+              <p style={{color: 'var(--text-secondary)'}}>Choose a category for your {formData.type.toLowerCase()}.</p>
+              <div className="category-grid">
+                {categories.map(cat => (
+                  <button key={cat} className="cat-btn" onClick={() => handleCategorySelect(cat)}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="wizard-step">
+              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(2)}>← Back</button>
+              
+              <div style={{background: 'var(--surface-color)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '2rem'}}>
+                <p style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>Type: <strong>{formData.type}</strong></p>
+                <p style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>Category: <strong>{formData.category}</strong></p>
+              </div>
+
+              <form onSubmit={handleSubmit}>
+                <div className="form-group">
+                  <label>Title / Name of Goods</label>
+                  <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="What was this for?" required />
+                </div>
+                
+                <div className="form-group">
+                  <label>Amount (IDR)</label>
+                  <input 
+                    type="text" 
+                    inputMode="numeric"
+                    value={formData.amount} 
+                    onChange={handleAmountChange} 
+                    placeholder="0" 
+                    required 
+                  />
+                  <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem'}}>
+                    {quickAmounts.map(amt => (
+                      <button 
+                        key={amt} 
+                        type="button" 
+                        className="cat-btn" 
+                        style={{padding: '0.5rem 0.75rem'}}
+                        onClick={() => setFormData({...formData, amount: new Intl.NumberFormat('id-ID').format(amt)})}
+                      >
+                        +{amt >= 1000 ? (amt / 1000) + 'k' : amt}
+                      </button>
+                    ))}
+                    <button 
+                      type="button" 
+                      className="cat-btn" 
+                      style={{padding: '0.5rem 0.75rem', borderStyle: 'dashed'}}
+                      onClick={handleAddCustomAmount}
+                    >
+                      + Custom
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="form-group">
+                  <label>Date</label>
+                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
+                </div>
+
+                <button type="submit" className="btn" style={{marginTop: '2rem'}} disabled={submitting}>
+                  {submitting ? 'Saving...' : 'Save Transaction'}
+                </button>
+              </form>
+            </div>
+          )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
