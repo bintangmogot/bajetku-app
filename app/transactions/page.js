@@ -135,8 +135,8 @@ export default function Transactions() {
             transactions.map((tx) => (
               <div key={tx.id} className="card" style={{padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <div>
-                  <strong style={{display: 'block', fontSize: '1rem'}}>{tx.category}</strong>
-                  <span style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>{tx.date} {tx.description ? `• ${tx.description}` : ''}</span>
+                  <strong style={{display: 'block', fontSize: '1rem', marginBottom: '0.25rem'}}>{tx.description || 'No Title'}</strong>
+                  <span style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>{tx.date} • {tx.category}</span>
                 </div>
                 <div style={{fontWeight: '600', color: tx.type === 'Expense' ? 'var(--text-primary)' : 'var(--success-color)'}}>
                   {tx.type === 'Expense' ? '-' : '+'}{formatCurrency(tx.amount)}
