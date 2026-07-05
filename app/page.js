@@ -99,7 +99,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap'}}>
+      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'nowrap'}}>
         <select 
           value={filterType} 
           onChange={(e) => {
@@ -108,7 +108,7 @@ export default function Dashboard() {
             if (e.target.value === 'month') setFilterValue(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
             if (e.target.value === 'date') setFilterValue(now.toISOString().split('T')[0]);
           }}
-          style={{padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)'}}
+          style={{padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer'}}
         >
           <option value="month">Monthly</option>
           <option value="date">Daily</option>
@@ -120,7 +120,8 @@ export default function Dashboard() {
             type={filterType} 
             value={filterValue} 
             onChange={(e) => setFilterValue(e.target.value)}
-            style={{padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)'}}
+            onClick={(e) => { try { e.target.showPicker(); } catch(err){} }}
+            style={{flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', width: '100%'}}
           />
         )}
       </div>

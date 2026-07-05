@@ -86,25 +86,25 @@ export default function Budget() {
       ) : (
         <div style={{marginBottom: '5rem'}}>
           {budgets.map((b, idx) => (
-            <div key={idx} className="card" style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
-              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                <label style={{fontWeight: '500'}}>{b.category}</label>
+            <div key={idx} className="card" style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', gap: '1rem'}}>
+              <label style={{fontWeight: '500', margin: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{b.category}</label>
+              <div style={{display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1}}>
+                <input 
+                  type="text" 
+                  inputMode="numeric"
+                  value={b.amount ? new Intl.NumberFormat('id-ID').format(b.amount) : ''} 
+                  onChange={(e) => handleAmountChange(idx, e.target.value)}
+                  placeholder="0"
+                  style={{width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', textAlign: 'right'}}
+                />
                 <button 
                   className="btn" 
-                  style={{padding: '0.25rem', background: 'transparent', color: 'var(--danger-color)', width: 'auto', border: 'none'}} 
+                  style={{padding: '0.25rem', background: 'transparent', color: 'var(--danger-color)', width: 'auto', border: 'none', margin: 0}} 
                   onClick={() => handleRemoveCategory(idx)}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
               </div>
-              <input 
-                type="text" 
-                inputMode="numeric"
-                value={b.amount ? new Intl.NumberFormat('id-ID').format(b.amount) : ''} 
-                onChange={(e) => handleAmountChange(idx, e.target.value)}
-                placeholder="0"
-                style={{width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)'}}
-              />
             </div>
           ))}
           
