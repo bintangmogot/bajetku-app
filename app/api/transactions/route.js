@@ -20,7 +20,7 @@ export async function GET() {
       return NextResponse.json({ data: [] });
     }
 
-    const data = rows.slice(1).map(row => {
+    const data = rows.slice(1).filter(row => row[0] && row[0].trim() !== '').map(row => {
       // Clean amount string: remove "Rp", commas, and any non-numeric chars (except minus)
       const amountStr = String(row[4] || '0').replace(/[^0-9-]/g, '');
       return {

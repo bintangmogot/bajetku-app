@@ -16,7 +16,17 @@ export default function Budget() {
       const res = await fetch('/api/budget');
       const json = await res.json();
       if (json.error) setError(json.error);
-      else setBudgets(json.data || []);
+      else {
+        const fetchedBudgets = json.data || [];
+        const fetchedCats = fetchedBudgets.map(b => b.category);
+        const defaultCats = ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Self Development', 'Grooming', 'Other'];
+        
+        const missing = defaultCats
+          .filter(c => !fetchedCats.includes(c))
+          .map(c => ({ category: c, amount: 0 }));
+          
+        setBudgets([...fetchedBudgets, ...missing]);
+      }
     } catch (err) {
       setError(err.message);
     } finally {

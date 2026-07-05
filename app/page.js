@@ -6,6 +6,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [setupLoading, setSetupLoading] = useState(false);
+  const [overBudgetCats, setOverBudgetCats] = useState([]);
+  const [showOverBudgetModal, setShowOverBudgetModal] = useState(false);
   
   const [filterType, setFilterType] = useState('month'); // 'all', 'month', 'date'
   const [filterValue, setFilterValue] = useState(() => {
@@ -26,7 +28,27 @@ export default function Dashboard() {
       const json = await res.json();
       
       if (json.error) setError(json.error);
-      else setData(json.summary);
+      else {
+        setData(json.summary);
+        
+        const exceeded = [];
+        if (json.summary.categoryBreakdown && json.summary.budgetLimit) {
+          Object.entries(json.summary.categoryBreakdown).forEach(([cat, amount]) => {
+            if (json.summary.budgetLimit[cat] && amount > json.summary.budgetLimit[cat]) {
+              exceeded.push({
+                category: cat,
+                amount,
+                limit: json.summary.budgetLimit[cat]
+              });
+            }
+          });
+        }
+        
+        if (exceeded.length > 0 && !sessionStorage.getItem('dismissedOverBudget')) {
+          setOverBudgetCats(exceeded);
+          setShowOverBudgetModal(true);
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -148,10 +170,35 @@ export default function Dashboard() {
               </div>
             ))
           ) : (
-             <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>No expenses recorded yet.</p>
-          )}
+              <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>No expenses recorded yet.</p>
+           )}
         </div>
       </div>
+
+      {showOverBudgetModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{maxWidth: '400px', textAlign: 'center'}}>
+            <div style={{color: 'var(--danger-color)', marginBottom: '1rem'}}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <h2 style={{marginBottom: '0.5rem'}}>Over Budget Alert!</h2>
+            <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>
+              You have exceeded your budget limits in the following categories:
+            </p>
+            <div style={{textAlign: 'left', marginBottom: '2rem'}}>
+              {overBudgetCats.map((b, i) => (
+                <div key={i} style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', padding: '0.75rem', background: 'var(--background-color)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                  <strong>{b.category}</strong>
+                  <span className="expense">{formatCurrency(b.amount - b.limit)} over</span>
+                </div>
+              ))}
+            </div>
+            <button className="btn" onClick={() => { setShowOverBudgetModal(false); sessionStorage.setItem('dismissedOverBudget', 'true'); }}>
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

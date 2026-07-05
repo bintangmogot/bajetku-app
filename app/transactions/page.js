@@ -10,6 +10,8 @@ export default function Transactions() {
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [budgetLimits, setBudgetLimits] = useState({});
+  const [confirmData, setConfirmData] = useState(null);
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -54,6 +56,10 @@ export default function Transactions() {
       if (json.data && json.data.length > 0) {
         const budgetCats = json.data.map(b => b.category);
         setExpenseCategories(Array.from(new Set([...budgetCats, ...defaultExpenseCats])));
+        
+        const limits = {};
+        json.data.forEach(b => limits[b.category] = b.amount);
+        setBudgetLimits(limits);
       }
     } catch (e) {
       console.error('Failed to fetch categories', e);
@@ -99,12 +105,35 @@ export default function Transactions() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handlePreSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    
-    // Convert formatted string (e.g. "10.000") back to pure number (10000) for the API
     const rawAmount = Number(String(formData.amount).replace(/\./g, ''));
+    
+    if (formData.type === 'Expense') {
+      const limit = budgetLimits[formData.category] || 0;
+      if (limit > 0) {
+        const currentMonth = formData.date.substring(0, 7);
+        const currentTotal = transactions
+          .filter(t => t.type === 'Expense' && t.category === formData.category && t.date.startsWith(currentMonth))
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        if (currentTotal + rawAmount > limit) {
+          setConfirmData({
+            currentTotal,
+            limit,
+            rawAmount
+          });
+          return;
+        }
+      }
+    }
+    
+    executeSubmit(rawAmount);
+  };
+
+  const executeSubmit = async (rawAmount) => {
+    setSubmitting(true);
+    setConfirmData(null);
     
     try {
       const res = await fetch('/api/transactions', {
@@ -216,7 +245,7 @@ export default function Transactions() {
                 <p style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>Category: <strong>{formData.category}</strong></p>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handlePreSubmit}>
                 <div className="form-group">
                   <label>Title / Name of Goods</label>
                   <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="What was this for?" required />
@@ -275,6 +304,41 @@ export default function Transactions() {
               </form>
             </div>
           )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmData && (
+        <div className="modal-overlay" style={{zIndex: 1000}}>
+          <div className="modal-content" style={{maxWidth: '400px', textAlign: 'center'}}>
+            <div style={{color: 'var(--danger-color)', marginBottom: '1rem'}}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <h2 style={{marginBottom: '0.5rem'}}>Over Budget Alert</h2>
+            <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>
+              This transaction puts you over your {formData.category} budget for the month.
+            </p>
+            
+            <div style={{textAlign: 'left', marginBottom: '2rem', padding: '1rem', background: 'var(--surface-color)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+              <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem'}}>
+                <span>Budget Limit:</span>
+                <strong>{formatCurrency(confirmData.limit)}</strong>
+              </div>
+              <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem'}}>
+                <span>Current Total:</span>
+                <strong>{formatCurrency(confirmData.currentTotal)}</strong>
+              </div>
+              <div style={{display: 'flex', justifyContent: 'space-between', color: 'var(--danger-color)'}}>
+                <span>New Total:</span>
+                <strong>{formatCurrency(confirmData.currentTotal + confirmData.rawAmount)}</strong>
+              </div>
+            </div>
+
+            <div style={{display: 'flex', gap: '1rem'}}>
+              <button className="btn secondary" style={{flex: 1}} onClick={() => setConfirmData(null)}>Cancel</button>
+              <button className="btn" style={{flex: 1, background: 'var(--danger-color)'}} onClick={() => executeSubmit(confirmData.rawAmount)}>Continue</button>
+            </div>
           </div>
         </div>
       )}
