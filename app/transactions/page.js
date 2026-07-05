@@ -154,6 +154,19 @@ export default function Transactions() {
     }
   };
 
+  const handleDeleteTransaction = async (id) => {
+    if (!confirm('Are you sure you want to delete this transaction?')) return;
+    
+    try {
+      const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.error) alert('Error: ' + json.error);
+      else fetchTransactions();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
@@ -182,8 +195,13 @@ export default function Transactions() {
                   </strong>
                   <span style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>{tx.date} • {tx.category}</span>
                 </div>
-                <div style={{fontWeight: '600', color: tx.type === 'Expense' ? 'var(--text-primary)' : 'var(--success-color)'}}>
-                  {tx.type === 'Expense' ? '-' : '+'}{formatCurrency(tx.amount)}
+                <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                  <div style={{fontWeight: '600', color: tx.type === 'Expense' ? 'var(--text-primary)' : 'var(--success-color)'}}>
+                    {tx.type === 'Expense' ? '-' : '+'}{formatCurrency(tx.amount)}
+                  </div>
+                  <button onClick={() => handleDeleteTransaction(tx.id)} style={{background: 'transparent', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '0.25rem', display: 'flex'}}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  </button>
                 </div>
               </div>
             ))

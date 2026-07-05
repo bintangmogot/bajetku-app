@@ -41,6 +41,12 @@ export default function Budget() {
     setBudgets(newBudgets);
   };
 
+  const handleRemoveCategory = (index) => {
+    if (!confirm('Are you sure you want to remove this category?')) return;
+    const newBudgets = budgets.filter((_, i) => i !== index);
+    setBudgets(newBudgets);
+  };
+
   const handleAddCategory = () => {
     const cat = prompt('Enter new category name:');
     if (cat) {
@@ -81,7 +87,16 @@ export default function Budget() {
         <div style={{marginBottom: '5rem'}}>
           {budgets.map((b, idx) => (
             <div key={idx} className="card" style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
-              <label style={{fontWeight: '500'}}>{b.category}</label>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <label style={{fontWeight: '500'}}>{b.category}</label>
+                <button 
+                  className="btn" 
+                  style={{padding: '0.25rem', background: 'transparent', color: 'var(--danger-color)', width: 'auto', border: 'none'}} 
+                  onClick={() => handleRemoveCategory(idx)}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
               <input 
                 type="text" 
                 inputMode="numeric"

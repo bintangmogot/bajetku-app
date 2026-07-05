@@ -69,3 +69,56 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+
+    const sheets = await getGoogleSheets();
+    const spreadsheetId = getSpreadsheetId();
+
+    if (!spreadsheetId) {
+      return NextResponse.json({ error: 'Spreadsheet ID not configured' }, { status: 500 });
+    }
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'Transactions!A:A',
+    });
+    
+    const rows = response.data.values;
+    if (!rows) return NextResponse.json({ error: 'No transactions found' }, { status: 404 });
+    
+    const rowIndex = rows.findIndex(row => row[0] === id);
+    if (rowIndex === -1) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+    }
+
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheet = spreadsheet.data.sheets.find(s => s.properties.title === 'Transactions');
+    
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId: sheet.properties.sheetId,
+              dimension: 'ROWS',
+              startIndex: rowIndex,
+              endIndex: rowIndex + 1
+            }
+          }
+        }]
+      }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
