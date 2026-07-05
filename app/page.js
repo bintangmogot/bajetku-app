@@ -125,14 +125,26 @@ export default function Dashboard() {
         <div>
           {data?.categoryBreakdown && Object.keys(data.categoryBreakdown).length > 0 ? (
             Object.entries(data.categoryBreakdown).map(([category, amount]) => (
-              <div key={category} className="list-item">
-                <div className="left">
-                  <strong>{category}</strong>
-                  <span>{data?.budgetLimit?.[category] ? `Limit: ${formatCurrency(data.budgetLimit[category])}` : 'No limit set'}</span>
+              <div key={category} className="list-item" style={{display: 'block'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem'}}>
+                  <div className="left">
+                    <strong>{category}</strong>
+                    <span>{data?.budgetLimit?.[category] ? `Limit: ${formatCurrency(data.budgetLimit[category])}` : 'No limit set'}</span>
+                  </div>
+                  <div className="right expense">
+                    {formatCurrency(amount)}
+                  </div>
                 </div>
-                <div className="right expense">
-                  {formatCurrency(amount)}
-                </div>
+                {data?.budgetLimit?.[category] > 0 && (
+                  <div style={{width: '100%', height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden'}}>
+                    <div style={{
+                      height: '100%', 
+                      width: `${Math.min(100, (amount / data.budgetLimit[category]) * 100)}%`,
+                      background: (amount / data.budgetLimit[category]) > 0.9 ? 'var(--danger-color)' : 'var(--primary-color)',
+                      transition: 'width 0.3s ease'
+                    }}></div>
+                  </div>
+                )}
               </div>
             ))
           ) : (

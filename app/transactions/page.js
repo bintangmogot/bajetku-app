@@ -16,7 +16,8 @@ export default function Transactions() {
     type: '',
     category: '',
     amount: '',
-    description: ''
+    description: '',
+    qty: 1
   });
 
   const [quickAmounts, setQuickAmounts] = useState([10000, 20000, 50000, 100000, 500000]);
@@ -48,7 +49,7 @@ export default function Transactions() {
   }, []);
 
   const openWizard = () => {
-    setFormData({ date: new Date().toISOString().split('T')[0], type: '', category: '', amount: '', description: '' });
+    setFormData({ date: new Date().toISOString().split('T')[0], type: '', category: '', amount: '', description: '', qty: 1 });
     setStep(1);
     setShowModal(true);
   };
@@ -115,7 +116,7 @@ export default function Transactions() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
 
-  const expenseCategories = ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Other'];
+  const expenseCategories = ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Self Development', 'Grooming', 'Other'];
   const incomeCategories = ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'];
   const categories = formData.type === 'Expense' ? expenseCategories : incomeCategories;
 
@@ -135,7 +136,9 @@ export default function Transactions() {
             transactions.map((tx) => (
               <div key={tx.id} className="card" style={{padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <div>
-                  <strong style={{display: 'block', fontSize: '1rem', marginBottom: '0.25rem'}}>{tx.description || 'No Title'}</strong>
+                  <strong style={{display: 'block', fontSize: '1rem', marginBottom: '0.25rem'}}>
+                    {tx.description || 'No Title'} {tx.qty > 1 && <span style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>x{tx.qty}</span>}
+                  </strong>
                   <span style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>{tx.date} • {tx.category}</span>
                 </div>
                 <div style={{fontWeight: '600', color: tx.type === 'Expense' ? 'var(--text-primary)' : 'var(--success-color)'}}>
@@ -237,6 +240,15 @@ export default function Transactions() {
                     >
                       + Custom
                     </button>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Quantity</label>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                    <button type="button" className="cat-btn" style={{padding: '0.5rem 1rem'}} onClick={() => setFormData({...formData, qty: Math.max(1, formData.qty - 1)})}>-</button>
+                    <span style={{fontSize: '1.25rem', fontWeight: 'bold'}}>{formData.qty}</span>
+                    <button type="button" className="cat-btn" style={{padding: '0.5rem 1rem'}} onClick={() => setFormData({...formData, qty: formData.qty + 1})}>+</button>
                   </div>
                 </div>
                 

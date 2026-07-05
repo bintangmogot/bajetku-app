@@ -40,7 +40,7 @@ export async function POST(request) {
     const styleRequests = [];
 
     // Format Transactions Header
-    const txHeaders = ['ID', 'Date', 'Type', 'Category', 'Amount', 'Title / Name of Goods'];
+    const txHeaders = ['ID', 'Date', 'Type', 'Category', 'Amount', 'Title / Name of Goods', 'Qty'];
     styleRequests.push({
       updateCells: {
         start: { sheetId: txSheetId, rowIndex: 0, columnIndex: 0 },
@@ -72,6 +72,7 @@ export async function POST(request) {
     styleRequests.push({ updateDimensionProperties: { range: { sheetId: txSheetId, dimension: 'COLUMNS', startIndex: 5, endIndex: 6 }, properties: { pixelSize: 300 }, fields: 'pixelSize' } });
     styleRequests.push({ updateDimensionProperties: { range: { sheetId: txSheetId, dimension: 'COLUMNS', startIndex: 4, endIndex: 5 }, properties: { pixelSize: 150 }, fields: 'pixelSize' } });
     styleRequests.push({ updateDimensionProperties: { range: { sheetId: txSheetId, dimension: 'COLUMNS', startIndex: 3, endIndex: 4 }, properties: { pixelSize: 150 }, fields: 'pixelSize' } });
+    styleRequests.push({ updateDimensionProperties: { range: { sheetId: txSheetId, dimension: 'COLUMNS', startIndex: 6, endIndex: 7 }, properties: { pixelSize: 80 }, fields: 'pixelSize' } });
 
     // Format Budget Header
     const budgetHeaders = ['Category', 'Monthly Limit'];

@@ -12,7 +12,7 @@ export async function GET() {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Transactions!A:F',
+      range: 'Transactions!A:G',
     });
 
     const rows = response.data.values;
@@ -30,6 +30,7 @@ export async function GET() {
         category: row[3] || '',
         amount: Number(amountStr) || 0,
         description: row[5] || '',
+        qty: Number(row[6]) || 1,
       };
     }).reverse();
 
@@ -43,7 +44,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { date, type, category, amount, description } = body;
+    const { date, type, category, amount, description, qty = 1 } = body;
 
     const sheets = await getGoogleSheets();
     const spreadsheetId = getSpreadsheetId();
@@ -53,11 +54,11 @@ export async function POST(request) {
     }
 
     const id = Date.now().toString();
-    const newRow = [id, date, type, category, amount, description];
+    const newRow = [id, date, type, category, amount, description, qty];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: 'Transactions!A:F',
+      range: 'Transactions!A:G',
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [newRow] },
     });
