@@ -21,6 +21,8 @@ export default function Transactions() {
   });
 
   const [quickAmounts, setQuickAmounts] = useState([10000, 20000, 50000, 100000, 500000]);
+  const defaultExpenseCats = ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Self Development', 'Grooming', 'Other'];
+  const [expenseCategories, setExpenseCategories] = useState(defaultExpenseCats);
 
   useEffect(() => {
     const saved = localStorage.getItem('bajetkuQuickAmounts');
@@ -28,6 +30,7 @@ export default function Transactions() {
       try { setQuickAmounts(JSON.parse(saved)); } catch (e) {}
     }
     fetchTransactions();
+    fetchCategories();
   }, []);
 
   const fetchTransactions = async () => {
@@ -44,9 +47,19 @@ export default function Transactions() {
     }
   };
 
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/budget');
+      const json = await res.json();
+      if (json.data && json.data.length > 0) {
+        const budgetCats = json.data.map(b => b.category);
+        setExpenseCategories(Array.from(new Set([...budgetCats, ...defaultExpenseCats])));
+      }
+    } catch (e) {
+      console.error('Failed to fetch categories', e);
+    }
+  };
+
 
   const openWizard = () => {
     setFormData({ date: new Date().toISOString().split('T')[0], type: '', category: '', amount: '', description: '', qty: 1 });
@@ -116,7 +129,6 @@ export default function Transactions() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
 
-  const expenseCategories = ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Self Development', 'Grooming', 'Other'];
   const incomeCategories = ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'];
   const categories = formData.type === 'Expense' ? expenseCategories : incomeCategories;
 
