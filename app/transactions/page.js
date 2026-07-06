@@ -128,11 +128,11 @@ export default function Transactions() {
           .filter(t => t.type === 'Expense' && t.category === formData.category && t.date.startsWith(currentMonth))
           .reduce((sum, t) => sum + t.amount, 0);
           
-        if (currentTotal + rawAmount > limit) {
+        if (currentTotal + (rawAmount * formData.qty) > limit) {
           setConfirmData({
             currentTotal,
             limit,
-            rawAmount
+            rawAmount: rawAmount * formData.qty
           });
           return;
         }
@@ -276,7 +276,7 @@ export default function Transactions() {
                 </div>
                 
                 <div className="form-group">
-                  <label>Amount (IDR)</label>
+                  <label>Price per item / Amount (IDR)</label>
                   <input 
                     type="text" 
                     inputMode="numeric"
@@ -285,6 +285,11 @@ export default function Transactions() {
                     placeholder="0" 
                     required 
                   />
+                  {formData.qty > 1 && formData.amount && (
+                    <div style={{fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem', fontWeight: 'bold'}}>
+                      Total: {new Intl.NumberFormat('id-ID').format(Number(formData.amount.replace(/\./g, '')) * formData.qty)} IDR
+                    </div>
+                  )}
                   <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem'}}>
                     {quickAmounts.map(amt => (
                       <button 

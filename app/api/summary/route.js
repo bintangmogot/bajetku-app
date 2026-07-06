@@ -14,7 +14,7 @@ export async function GET(request) {
     }
 
     const [transactionsRes, budgetRes] = await Promise.all([
-      sheets.spreadsheets.values.get({ spreadsheetId, range: 'Transactions!A:F' }).catch(() => ({ data: { values: [] } })),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: 'Transactions!A:H' }).catch(() => ({ data: { values: [] } })),
       sheets.spreadsheets.values.get({ spreadsheetId, range: 'Budget!A:B' }).catch(() => ({ data: { values: [] } }))
     ]);
 
@@ -45,7 +45,7 @@ export async function GET(request) {
 
         const type = row[2];
         const category = row[3];
-        const amountStr = String(row[4] || '0').replace(/[^0-9-]/g, '');
+        const amountStr = String(row[7] || '0').replace(/[^0-9-]/g, '');
         const amount = Number(amountStr) || 0;
 
         if (type === 'Income') {

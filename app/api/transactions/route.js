@@ -12,7 +12,7 @@ export async function GET() {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Transactions!A:G',
+      range: 'Transactions!A:H',
     });
 
     const rows = response.data.values;
@@ -22,15 +22,16 @@ export async function GET() {
 
     const data = rows.slice(1).filter(row => row[0] && row[0].trim() !== '').map(row => {
       // Clean amount string: remove "Rp", commas, and any non-numeric chars (except minus)
-      const amountStr = String(row[4] || '0').replace(/[^0-9-]/g, '');
+      const amountStr = String(row[7] || '0').replace(/[^0-9-]/g, '');
       return {
         id: row[0] || '',
         date: row[1] || '',
         type: row[2] || '',
         category: row[3] || '',
+        description: row[4] || '',
+        qty: Number(row[5]) || 1,
+        price: Number(String(row[6] || '0').replace(/[^0-9-]/g, '')) || 0,
         amount: Number(amountStr) || 0,
-        description: row[5] || '',
-        qty: Number(row[6]) || 1,
       };
     }).reverse();
 
@@ -44,7 +45,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { date, type, category, amount, description, qty = 1 } = body;
+    const { date, type, category, amount, description, qty = 1, price } = body;
 
     const sheets = await getGoogleSheets();
     const spreadsheetId = getSpreadsheetId();
@@ -54,11 +55,28 @@ export async function POST(request) {
     }
 
     const id = Date.now().toString();
-    const newRow = [id, date, type, category, amount, description, qty];
+    const pricePerQty = amount;
+    const totalAmount = amount * qty;
+    const newRow = [id, date, type, category, description, qty, pricePerQty, totalAmount];
 
-    await sheets.spreadsheets.values.append({
+    // Fetch existing IDs to find the first empty row in case there are gaps
+    const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Transactions!A:G',
+      range: 'Transactions!A:A',
+    });
+    const rows = response.data?.values || [];
+    
+    let insertRowIndex = rows.length; // Default to append at the end
+    for (let i = 1; i < rows.length; i++) {
+      if (!rows[i] || !rows[i][0] || rows[i][0].trim() === '') {
+        insertRowIndex = i;
+        break;
+      }
+    }
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `Transactions!A${insertRowIndex + 1}:H${insertRowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [newRow] },
     });
