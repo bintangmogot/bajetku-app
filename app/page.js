@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [setupLoading, setSetupLoading] = useState(false);
   const [overBudgetCats, setOverBudgetCats] = useState([]);
   const [showOverBudgetModal, setShowOverBudgetModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(null);
   
   const [filterType, setFilterType] = useState('month'); // 'all', 'month', 'date'
   const [filterValue, setFilterValue] = useState(() => {
@@ -61,13 +62,13 @@ export default function Dashboard() {
     try {
       const res = await fetch('/api/setup', { method: 'POST' });
       const json = await res.json();
-      if (json.error) alert('Error: ' + json.error);
+      if (json.error) setAlertMessage('Error: ' + json.error);
       else {
-        alert('Spreadsheet successfully styled and formatted!');
+        setAlertMessage('Spreadsheet successfully styled and formatted!');
         fetchSummary();
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      setAlertMessage('Error: ' + err.message);
     } finally {
       setSetupLoading(false);
     }
@@ -175,6 +176,20 @@ export default function Dashboard() {
            )}
         </div>
       </div>
+
+      {/* Alert Modal */}
+      {alertMessage && (
+        <div className="modal-overlay" style={{zIndex: 1100}}>
+          <div className="modal-content" style={{maxWidth: '400px', textAlign: 'center'}}>
+            <div style={{color: 'var(--text-primary)', marginBottom: '1rem'}}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <h2 style={{marginBottom: '1rem'}}>Notice</h2>
+            <p style={{color: 'var(--text-secondary)', marginBottom: '2rem'}}>{alertMessage}</p>
+            <button className="btn" style={{width: '100%'}} onClick={() => setAlertMessage(null)}>OK</button>
+          </div>
+        </div>
+      )}
 
       {showOverBudgetModal && (
         <div className="modal-overlay">

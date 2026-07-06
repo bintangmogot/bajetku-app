@@ -6,6 +6,10 @@ export default function Budget() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [promptData, setPromptData] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
     fetchBudgets();
@@ -42,16 +46,27 @@ export default function Budget() {
   };
 
   const handleRemoveCategory = (index) => {
-    if (!confirm('Are you sure you want to remove this category?')) return;
+    setDeleteConfirm(index);
+  };
+
+  const confirmDelete = () => {
+    const index = deleteConfirm;
+    setDeleteConfirm(null);
     const newBudgets = budgets.filter((_, i) => i !== index);
     setBudgets(newBudgets);
   };
 
   const handleAddCategory = () => {
-    const cat = prompt('Enter new category name:');
+    setNewCategoryName('');
+    setPromptData(true);
+  };
+
+  const confirmAddCategory = () => {
+    const cat = newCategoryName.trim();
     if (cat) {
       setBudgets([...budgets, { category: cat, amount: 0 }]);
     }
+    setPromptData(false);
   };
 
   const handleSave = async () => {
@@ -63,10 +78,10 @@ export default function Budget() {
         body: JSON.stringify({ budgets })
       });
       const json = await res.json();
-      if (json.error) alert('Error: ' + json.error);
-      else alert('Budget updated successfully!');
+      if (json.error) setAlertMessage('Error: ' + json.error);
+      else setAlertMessage('Budget updated successfully!');
     } catch (err) {
-      alert('Error: ' + err.message);
+      setAlertMessage('Error: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -111,6 +126,59 @@ export default function Budget() {
           <button className="btn" onClick={handleSave} disabled={saving} style={{marginTop: '1rem'}}>
             {saving ? 'Saving...' : 'Save Budgets'}
           </button>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {alertMessage && (
+        <div className="modal-overlay" style={{zIndex: 1100}}>
+          <div className="modal-content" style={{maxWidth: '400px', textAlign: 'center'}}>
+            <div style={{color: 'var(--text-primary)', marginBottom: '1rem'}}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+            <h2 style={{marginBottom: '1rem'}}>Notice</h2>
+            <p style={{color: 'var(--text-secondary)', marginBottom: '2rem'}}>{alertMessage}</p>
+            <button className="btn" style={{width: '100%'}} onClick={() => setAlertMessage(null)}>OK</button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm !== null && (
+        <div className="modal-overlay" style={{zIndex: 1100}}>
+          <div className="modal-content" style={{maxWidth: '400px', textAlign: 'center'}}>
+            <div style={{color: 'var(--danger-color)', marginBottom: '1rem'}}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </div>
+            <h2 style={{marginBottom: '0.5rem'}}>Remove Category</h2>
+            <p style={{color: 'var(--text-secondary)', marginBottom: '2rem'}}>Are you sure you want to remove this category?</p>
+            <div style={{display: 'flex', gap: '1rem'}}>
+              <button className="btn secondary" style={{flex: 1}} onClick={() => setDeleteConfirm(null)}>Cancel</button>
+              <button className="btn" style={{flex: 1, background: 'var(--danger-color)'}} onClick={confirmDelete}>Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt Modal */}
+      {promptData && (
+        <div className="modal-overlay" style={{zIndex: 1100}}>
+          <div className="modal-content" style={{maxWidth: '400px'}}>
+            <h2 style={{marginBottom: '1rem'}}>New Category</h2>
+            <div className="form-group">
+              <input 
+                type="text" 
+                value={newCategoryName} 
+                onChange={(e) => setNewCategoryName(e.target.value)} 
+                placeholder="Enter category name"
+                autoFocus
+              />
+            </div>
+            <div style={{display: 'flex', gap: '1rem', marginTop: '1.5rem'}}>
+              <button className="btn secondary" style={{flex: 1}} onClick={() => setPromptData(false)}>Cancel</button>
+              <button className="btn" style={{flex: 1}} onClick={confirmAddCategory}>Add</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
