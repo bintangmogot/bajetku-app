@@ -4,7 +4,7 @@ import { getGoogleSheets, getSpreadsheetId } from '@/lib/googleSheets';
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get('period') || 'all'; // 'all', 'YYYY-MM', or 'YYYY-MM-DD'
+    const period = searchParams.get('period') || 'all';
 
     const sheets = await getGoogleSheets();
     const spreadsheetId = getSpreadsheetId();
@@ -14,7 +14,7 @@ export async function GET(request) {
     }
 
     const [transactionsRes, budgetRes] = await Promise.all([
-      sheets.spreadsheets.values.get({ spreadsheetId, range: 'Transactions!A:H' }).catch(() => ({ data: { values: [] } })),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: 'Log!A:H' }).catch(() => ({ data: { values: [] } })),
       sheets.spreadsheets.values.get({ spreadsheetId, range: 'Budget!A:B' }).catch(() => ({ data: { values: [] } }))
     ]);
 
@@ -23,6 +23,10 @@ export async function GET(request) {
 
     let totalIncome = 0;
     let totalExpense = 0;
+    let totalSaving = 0;
+    let totalInvestment = 0;
+    let totalLoan = 0;
+    let totalDebt = 0;
     let dailyExpense = 0;
     let categoryBreakdown = {};
 
@@ -38,9 +42,9 @@ export async function GET(request) {
 
     if (txRows.length > 1) {
       txRows.slice(1).forEach(row => {
+        if (!row[0] || !row[0].trim()) return; // skip empty rows
         const date = row[1] || '';
         
-        // Filter by period (startsWith allows matching '2026-07' to '2026-07-01')
         if (period !== 'all' && !date.startsWith(period)) return;
 
         const type = row[2];
@@ -48,20 +52,39 @@ export async function GET(request) {
         const amountStr = String(row[7] || '0').replace(/[^0-9-]/g, '');
         const amount = Number(amountStr) || 0;
 
-        if (type === 'Income') {
-          totalIncome += amount;
-        } else if (type === 'Expense') {
-          totalExpense += amount;
-          if (date === today) dailyExpense += amount;
-          categoryBreakdown[category] = (categoryBreakdown[category] || 0) + amount;
+        switch (type) {
+          case 'Income':
+            totalIncome += amount;
+            break;
+          case 'Expense':
+            totalExpense += amount;
+            if (date === today) dailyExpense += amount;
+            categoryBreakdown[category] = (categoryBreakdown[category] || 0) + amount;
+            break;
+          case 'Saving':
+            totalSaving += amount;
+            break;
+          case 'Investment':
+            totalInvestment += amount;
+            break;
+          case 'Loan':
+            totalLoan += amount;
+            break;
+          case 'Debt':
+            totalDebt += amount;
+            break;
         }
       });
     }
 
-    const netBalance = totalIncome - totalExpense;
+    const netBalance = totalIncome - totalExpense - totalSaving - totalInvestment;
 
     return NextResponse.json({
-      summary: { totalIncome, totalExpense, netBalance, dailyExpense, categoryBreakdown, budgetLimit }
+      summary: {
+        totalIncome, totalExpense, netBalance, dailyExpense,
+        totalSaving, totalInvestment, totalLoan, totalDebt,
+        categoryBreakdown, budgetLimit
+      }
     });
   } catch (error) {
     console.error('API Error:', error);

@@ -12,7 +12,7 @@ export async function GET() {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Transactions!A:H',
+      range: 'Log!A:H',
     });
 
     const rows = response.data.values;
@@ -21,7 +21,6 @@ export async function GET() {
     }
 
     const data = rows.slice(1).filter(row => row[0] && row[0].trim() !== '').map(row => {
-      // Clean amount string: remove "Rp", commas, and any non-numeric chars (except minus)
       const amountStr = String(row[7] || '0').replace(/[^0-9-]/g, '');
       return {
         id: row[0] || '',
@@ -45,7 +44,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { date, type, category, amount, description, qty = 1, price } = body;
+    const { date, type, category, amount, description, qty = 1 } = body;
 
     const sheets = await getGoogleSheets();
     const spreadsheetId = getSpreadsheetId();
@@ -59,14 +58,14 @@ export async function POST(request) {
     const totalAmount = amount * qty;
     const newRow = [id, date, type, category, description, qty, pricePerQty, totalAmount];
 
-    // Fetch existing IDs to find the first empty row in case there are gaps
+    // Find the first empty row (in case of gaps from deletions)
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Transactions!A:A',
+      range: 'Log!A:A',
     });
     const rows = response.data?.values || [];
     
-    let insertRowIndex = rows.length; // Default to append at the end
+    let insertRowIndex = rows.length;
     for (let i = 1; i < rows.length; i++) {
       if (!rows[i] || !rows[i][0] || rows[i][0].trim() === '') {
         insertRowIndex = i;
@@ -76,7 +75,7 @@ export async function POST(request) {
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `Transactions!A${insertRowIndex + 1}:H${insertRowIndex + 1}`,
+      range: `Log!A${insertRowIndex + 1}:H${insertRowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [newRow] },
     });
@@ -104,7 +103,7 @@ export async function DELETE(request) {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Transactions!A:A',
+      range: 'Log!A:A',
     });
     
     const rows = response.data.values;
@@ -116,7 +115,7 @@ export async function DELETE(request) {
     }
 
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-    const sheet = spreadsheet.data.sheets.find(s => s.properties.title === 'Transactions');
+    const sheet = spreadsheet.data.sheets.find(s => s.properties.title === 'Log');
     
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,

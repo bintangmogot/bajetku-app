@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [showOverBudgetModal, setShowOverBudgetModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState(null);
   
-  const [filterType, setFilterType] = useState('month'); // 'all', 'month', 'date'
+  const [filterType, setFilterType] = useState('month');
   const [filterValue, setFilterValue] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -36,11 +36,7 @@ export default function Dashboard() {
         if (json.summary.categoryBreakdown && json.summary.budgetLimit) {
           Object.entries(json.summary.categoryBreakdown).forEach(([cat, amount]) => {
             if (json.summary.budgetLimit[cat] && amount > json.summary.budgetLimit[cat]) {
-              exceeded.push({
-                category: cat,
-                amount,
-                limit: json.summary.budgetLimit[cat]
-              });
+              exceeded.push({ category: cat, amount, limit: json.summary.budgetLimit[cat] });
             }
           });
         }
@@ -91,12 +87,31 @@ export default function Dashboard() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
 
+  const cards = [
+    { label: 'Net Balance', value: data?.netBalance || 0, type: (data?.netBalance || 0) >= 0 ? 'income' : 'expense', full: true },
+    { label: 'Income', value: data?.totalIncome || 0, type: 'income' },
+    { label: 'Expense', value: data?.totalExpense || 0, type: 'expense' },
+    { label: 'Saving', value: data?.totalSaving || 0, type: 'saving' },
+    { label: 'Investment', value: data?.totalInvestment || 0, type: 'investment' },
+    { label: 'Loan Given', value: data?.totalLoan || 0, type: 'loan' },
+    { label: 'Debt Owed', value: data?.totalDebt || 0, type: 'debt' },
+  ];
+
+  const typeColors = {
+    income: 'var(--success-color)',
+    expense: 'var(--danger-color)',
+    saving: '#2ecc71',
+    investment: '#3498db',
+    loan: '#e6a817',
+    debt: '#9b59b6',
+  };
+
   return (
     <div>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem'}}>
         <h1>Overview</h1>
         <button className="btn secondary" style={{width: 'auto', padding: '0.5rem 1rem', fontSize: '0.875rem'}} onClick={handleSetup} disabled={setupLoading}>
-          {setupLoading ? 'Setting up...' : 'Setup Sheet'}
+          {setupLoading ? 'Setting up...' : '⚙️ Setup'}
         </button>
       </div>
 
@@ -127,28 +142,30 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Summary Cards */}
       <div className="dashboard-grid">
-        <div className="card" style={{gridColumn: '1 / -1'}}>
-          <h3>Net Balance</h3>
-          <div className={`value ${data?.netBalance >= 0 ? 'income' : 'expense'}`}>
-            {formatCurrency(data?.netBalance || 0)}
+        {cards.map((card, i) => (
+          <div key={i} className="card" style={card.full ? {gridColumn: '1 / -1'} : {}}>
+            <h3>{card.label}</h3>
+            <div className={`value`} style={{
+              fontSize: card.full ? '2rem' : '1.4rem',
+              color: typeColors[card.type] || 'var(--text-primary)',
+              fontWeight: '700'
+            }}>
+              {formatCurrency(card.value)}
+            </div>
           </div>
-        </div>
-        <div className="card">
-          <h3>Income</h3>
-          <div className="value income" style={{fontSize: '1.5rem'}}>{formatCurrency(data?.totalIncome || 0)}</div>
-        </div>
-        <div className="card">
-          <h3>Expense</h3>
-          <div className="value expense" style={{fontSize: '1.5rem'}}>{formatCurrency(data?.totalExpense || 0)}</div>
-        </div>
+        ))}
       </div>
 
-      <div className="card">
+      {/* Spending by Category */}
+      <div className="card" style={{marginTop: '0.5rem'}}>
         <h3 style={{marginBottom: '1rem'}}>Spending by Category</h3>
         <div>
           {data?.categoryBreakdown && Object.keys(data.categoryBreakdown).length > 0 ? (
-            Object.entries(data.categoryBreakdown).map(([category, amount]) => (
+            Object.entries(data.categoryBreakdown)
+              .sort((a, b) => b[1] - a[1])
+              .map(([category, amount]) => (
               <div key={category} className="list-item" style={{display: 'block'}}>
                 <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem'}}>
                   <div className="left">

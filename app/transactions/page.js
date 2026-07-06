@@ -14,6 +14,8 @@ export default function Transactions() {
   const [confirmData, setConfirmData] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [alertMessage, setAlertMessage] = useState(null);
+  const [allCategories, setAllCategories] = useState({});
+  const [filterType, setFilterType] = useState('All');
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -25,8 +27,15 @@ export default function Transactions() {
   });
 
   const [quickAmounts, setQuickAmounts] = useState([10000, 20000, 50000, 100000, 500000]);
-  const defaultExpenseCats = ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Self Development', 'Grooming', 'Other'];
-  const [expenseCategories, setExpenseCategories] = useState(defaultExpenseCats);
+
+  const typeConfig = {
+    Expense:    { icon: '↑', color: 'var(--danger-color)',  label: 'Expense' },
+    Income:     { icon: '↓', color: 'var(--success-color)', label: 'Income' },
+    Loan:       { icon: '🤝', color: '#e6a817',             label: 'Loan' },
+    Debt:       { icon: '📋', color: '#9b59b6',             label: 'Debt' },
+    Saving:     { icon: '🏦', color: '#2ecc71',             label: 'Saving' },
+    Investment: { icon: '📈', color: '#3498db',             label: 'Investment' },
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('bajetkuQuickAmounts');
@@ -35,13 +44,13 @@ export default function Transactions() {
     }
     fetchTransactions();
     fetchCategories();
+    fetchBudgets();
     
     const handleOpenWizard = () => openWizard();
     window.addEventListener('openTransactionWizard', handleOpenWizard);
     
     if (sessionStorage.getItem('pendingNewTransaction')) {
       sessionStorage.removeItem('pendingNewTransaction');
-      // small delay to ensure everything is mounted
       setTimeout(() => openWizard(), 50);
     }
     
@@ -64,21 +73,27 @@ export default function Transactions() {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/budget');
+      const res = await fetch('/api/categories');
       const json = await res.json();
-      if (json.data && json.data.length > 0) {
-        const budgetCats = json.data.map(b => b.category);
-        setExpenseCategories(Array.from(new Set([...budgetCats, ...defaultExpenseCats])));
-        
-        const limits = {};
-        json.data.forEach(b => limits[b.category] = b.amount);
-        setBudgetLimits(limits);
-      }
+      if (json.data) setAllCategories(json.data);
     } catch (e) {
       console.error('Failed to fetch categories', e);
     }
   };
 
+  const fetchBudgets = async () => {
+    try {
+      const res = await fetch('/api/budget');
+      const json = await res.json();
+      if (json.data && json.data.length > 0) {
+        const limits = {};
+        json.data.forEach(b => limits[b.category] = b.amount);
+        setBudgetLimits(limits);
+      }
+    } catch (e) {
+      console.error('Failed to fetch budgets', e);
+    }
+  };
 
   const openWizard = () => {
     setFormData({ date: new Date().toISOString().split('T')[0], type: '', category: '', amount: '', description: '', qty: 1 });
@@ -97,18 +112,17 @@ export default function Transactions() {
   };
 
   const handleAmountChange = (e) => {
-    // Remove all non-digits
     const rawValue = e.target.value.replace(/\D/g, '');
     if (!rawValue) {
       setFormData({...formData, amount: ''});
       return;
     }
-    // Add thousand separator dots
     const formatted = new Intl.NumberFormat('id-ID').format(Number(rawValue));
     setFormData({...formData, amount: formatted});
   };
 
   const handleAddCustomAmount = () => {
+    setAlertMessage(null);
     const amtStr = prompt('Enter a new amount template (e.g. 75000):');
     const amtNum = Number(amtStr);
     if (amtNum && !isNaN(amtNum)) {
@@ -188,12 +202,36 @@ export default function Transactions() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   };
 
-  const incomeCategories = ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'];
-  const categories = formData.type === 'Expense' ? expenseCategories : incomeCategories;
+  const categories = allCategories[formData.type] || [];
+  const typeList = Object.keys(typeConfig);
+  const filteredTransactions = filterType === 'All' ? transactions : transactions.filter(t => t.type === filterType);
 
   return (
     <div>
-      <h1 style={{marginBottom: '1.5rem'}}>Transactions</h1>
+      <h1 style={{marginBottom: '1rem'}}>Transactions</h1>
+
+      {/* Filter Chips */}
+      <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem'}}>
+        {['All', ...typeList].map(t => (
+          <button 
+            key={t}
+            onClick={() => setFilterType(t)}
+            style={{
+              padding: '0.4rem 0.75rem',
+              borderRadius: '20px',
+              border: filterType === t ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+              background: filterType === t ? 'var(--primary-color)' : 'transparent',
+              color: filterType === t ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: filterType === t ? '600' : '400',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {t === 'All' ? '🔍 All' : `${typeConfig[t].icon} ${t}`}
+          </button>
+        ))}
+      </div>
 
       {loading && !transactions.length ? (
         <div className="loading-container"><div className="spinner"></div></div>
@@ -201,23 +239,31 @@ export default function Transactions() {
         <div className="card"><p style={{color: 'var(--danger-color)'}}>{error}</p></div>
       ) : (
         <div style={{marginBottom: '5rem'}}>
-          {transactions.length === 0 ? (
+          {filteredTransactions.length === 0 ? (
             <p style={{color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem 0'}}>No transactions found.</p>
           ) : (
-            transactions.map((tx) => (
+            filteredTransactions.map((tx) => (
               <div key={tx.id} className="card" style={{padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                <div>
-                  <strong style={{display: 'block', fontSize: '1rem', marginBottom: '0.25rem'}}>
-                    {tx.description || 'No Title'} {tx.qty > 1 && <span style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>x{tx.qty}</span>}
-                  </strong>
-                  <span style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>{tx.date} • {tx.category}</span>
+                <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0}}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: typeConfig[tx.type]?.color || 'var(--border-color)', opacity: 0.9, fontSize: '1rem', flexShrink: 0
+                  }}>
+                    {typeConfig[tx.type]?.icon || '?'}
+                  </div>
+                  <div style={{minWidth: 0}}>
+                    <strong style={{display: 'block', fontSize: '0.95rem', marginBottom: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                      {tx.description || 'No Title'} {tx.qty > 1 && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>x{tx.qty}</span>}
+                    </strong>
+                    <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{tx.date} • {tx.category}</span>
+                  </div>
                 </div>
-                <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-                  <div style={{fontWeight: '600', color: tx.type === 'Expense' ? 'var(--text-primary)' : 'var(--success-color)'}}>
-                    {tx.type === 'Expense' ? '-' : '+'}{formatCurrency(tx.amount)}
+                <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0}}>
+                  <div style={{fontWeight: '600', fontSize: '0.95rem', color: typeConfig[tx.type]?.color || 'var(--text-primary)'}}>
+                    {['Expense', 'Debt'].includes(tx.type) ? '-' : '+'}{formatCurrency(tx.amount)}
                   </div>
                   <button onClick={() => handleDeleteTransaction(tx.id)} style={{background: 'transparent', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '0.25rem', display: 'flex'}}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
                 </div>
               </div>
@@ -226,7 +272,7 @@ export default function Transactions() {
         </div>
       )}
 
-      {/* Multi-step Wizard Overlay */}
+      {/* Multi-step Wizard */}
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -236,18 +282,20 @@ export default function Transactions() {
             </div>
           
           {step === 1 && (
-            <div className="wizard-step" style={{textAlign: 'center', marginTop: '2rem'}}>
-              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>What kind of transaction?</h2>
-              <p style={{color: 'var(--text-secondary)'}}>Choose the type to continue.</p>
-              <div className="big-btn-container">
-                <button className="big-btn expense-btn" onClick={() => handleTypeSelect('Expense')}>
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-                  Expense
-                </button>
-                <button className="big-btn income-btn" onClick={() => handleTypeSelect('Income')}>
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
-                  Income
-                </button>
+            <div className="wizard-step" style={{textAlign: 'center', marginTop: '1.5rem'}}>
+              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>What type?</h2>
+              <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>Choose the transaction type.</p>
+              <div style={{display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem'}}>
+                {typeList.map(t => (
+                  <button key={t} onClick={() => handleTypeSelect(t)} style={{
+                    padding: '1.25rem 0.75rem', borderRadius: '12px', border: '1px solid var(--border-color)',
+                    background: 'var(--surface-color)', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', gap: '0.5rem', transition: 'all 0.2s ease', color: 'var(--text-primary)'
+                  }}>
+                    <span style={{fontSize: '1.75rem'}}>{typeConfig[t].icon}</span>
+                    <span style={{fontWeight: '600', fontSize: '0.95rem', color: typeConfig[t].color}}>{typeConfig[t].label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -255,7 +303,7 @@ export default function Transactions() {
           {step === 2 && (
             <div className="wizard-step">
               <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(1)}>← Back</button>
-              <p style={{color: 'var(--text-secondary)'}}>Choose a category for your {formData.type.toLowerCase()}.</p>
+              <p style={{color: 'var(--text-secondary)'}}>Choose a category for your <strong style={{color: typeConfig[formData.type]?.color}}>{formData.type.toLowerCase()}</strong>.</p>
               <div className="category-grid">
                 {categories.map(cat => (
                   <button key={cat} className="cat-btn" onClick={() => handleCategorySelect(cat)}>
@@ -270,19 +318,25 @@ export default function Transactions() {
             <div className="wizard-step">
               <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(2)}>← Back</button>
               
-              <div style={{background: 'var(--surface-color)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '2rem'}}>
-                <p style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>Type: <strong>{formData.type}</strong></p>
-                <p style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>Category: <strong>{formData.category}</strong></p>
+              <div style={{background: 'var(--surface-color)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', display: 'flex', gap: '1.5rem'}}>
+                <div>
+                  <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>Type</span>
+                  <p style={{fontWeight: '600', color: typeConfig[formData.type]?.color, margin: 0}}>{formData.type}</p>
+                </div>
+                <div>
+                  <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>Category</span>
+                  <p style={{fontWeight: '600', margin: 0}}>{formData.category}</p>
+                </div>
               </div>
 
               <form onSubmit={handlePreSubmit}>
                 <div className="form-group">
-                  <label>Title / Name of Goods</label>
+                  <label>Title / Details</label>
                   <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="What was this for?" required />
                 </div>
                 
                 <div className="form-group">
-                  <label>Price per item / Amount (IDR)</label>
+                  <label>Price per item (IDR)</label>
                   <input 
                     type="text" 
                     inputMode="numeric"
@@ -343,7 +397,7 @@ export default function Transactions() {
         </div>
       )}
 
-      {/* Confirmation Modal */}
+      {/* Over Budget Confirmation Modal */}
       {confirmData && (
         <div className="modal-overlay" style={{zIndex: 1000}}>
           <div className="modal-content" style={{maxWidth: '400px', textAlign: 'center'}}>
