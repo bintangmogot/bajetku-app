@@ -106,9 +106,14 @@ export default function Transactions() {
     setStep(2);
   };
 
+  const handleDateSelect = (e) => {
+    e.preventDefault();
+    setStep(3);
+  };
+
   const handleCategorySelect = (category) => {
     setFormData({ ...formData, category });
-    setStep(3);
+    setStep(4);
   };
 
   const handleAmountChange = (e) => {
@@ -132,8 +137,8 @@ export default function Transactions() {
     }
   };
 
-  const handlePreSubmit = async (e) => {
-    e.preventDefault();
+  const handlePreSubmit = async (e, keepOpen = false) => {
+    if (e) e.preventDefault();
     const rawAmount = Number(String(formData.amount).replace(/\./g, ''));
     
     if (formData.type === 'Expense') {
@@ -148,17 +153,18 @@ export default function Transactions() {
           setConfirmData({
             currentTotal,
             limit,
-            rawAmount: rawAmount * formData.qty
+            rawAmount: rawAmount * formData.qty,
+            keepOpen
           });
           return;
         }
       }
     }
     
-    executeSubmit(rawAmount);
+    executeSubmit(rawAmount, keepOpen);
   };
 
-  const executeSubmit = async (rawAmount) => {
+  const executeSubmit = async (rawAmount, keepOpen = false) => {
     setSubmitting(true);
     setConfirmData(null);
     
@@ -171,8 +177,13 @@ export default function Transactions() {
       const json = await res.json();
       if (json.error) setAlertMessage('Error: ' + json.error);
       else {
-        setShowModal(false);
         fetchTransactions();
+        if (keepOpen) {
+          setFormData(prev => ({ ...prev, category: '', amount: '', description: '', qty: 1 }));
+          setStep(3);
+        } else {
+          setShowModal(false);
+        }
       }
     } catch (err) {
       setAlertMessage('Error: ' + err.message);
@@ -277,7 +288,7 @@ export default function Transactions() {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
-              <h2>{step === 1 ? 'New Transaction' : step === 2 ? 'Select Category' : 'Enter Details'}</h2>
+              <h2>{step === 1 ? 'New Transaction' : step === 2 ? 'Select Date' : step === 3 ? 'Select Category' : 'Enter Details'}</h2>
               <button className="close-btn" onClick={() => setShowModal(false)}>&times;</button>
             </div>
           
@@ -303,7 +314,21 @@ export default function Transactions() {
           {step === 2 && (
             <div className="wizard-step">
               <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(1)}>← Back</button>
-              <p style={{color: 'var(--text-secondary)'}}>Choose a category for your <strong style={{color: typeConfig[formData.type]?.color}}>{formData.type.toLowerCase()}</strong>.</p>
+              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>When?</h2>
+              <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>Select the date for this transaction.</p>
+              <form onSubmit={handleDateSelect}>
+                <div className="form-group">
+                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required style={{fontSize: '1.25rem', padding: '1rem'}} />
+                </div>
+                <button type="submit" className="btn" style={{marginTop: '2rem'}}>Next →</button>
+              </form>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="wizard-step">
+              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(2)}>← Back</button>
+              <p style={{color: 'var(--text-secondary)'}}>Choose a category for your <strong style={{color: typeConfig[formData.type]?.color}}>{formData.type.toLowerCase()}</strong> on <strong>{formData.date}</strong>.</p>
               <div className="category-grid">
                 {categories.map(cat => (
                   <button key={cat} className="cat-btn" onClick={() => handleCategorySelect(cat)}>
@@ -314,11 +339,15 @@ export default function Transactions() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="wizard-step">
-              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(2)}>← Back</button>
+              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(3)}>← Back</button>
               
-              <div style={{background: 'var(--surface-color)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', display: 'flex', gap: '1.5rem'}}>
+              <div style={{background: 'var(--surface-color)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap'}}>
+                <div>
+                  <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>Date</span>
+                  <p style={{fontWeight: '600', margin: 0}}>{formData.date}</p>
+                </div>
                 <div>
                   <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>Type</span>
                   <p style={{fontWeight: '600', color: typeConfig[formData.type]?.color, margin: 0}}>{formData.type}</p>
@@ -329,7 +358,7 @@ export default function Transactions() {
                 </div>
               </div>
 
-              <form onSubmit={handlePreSubmit}>
+              <form onSubmit={e => handlePreSubmit(e, false)}>
                 <div className="form-group">
                   <label>Title / Details</label>
                   <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="What was this for?" required />
@@ -381,15 +410,15 @@ export default function Transactions() {
                     <button type="button" className="cat-btn" style={{padding: '0.5rem 1rem'}} onClick={() => setFormData({...formData, qty: formData.qty + 1})}>+</button>
                   </div>
                 </div>
-                
-                <div className="form-group">
-                  <label>Date</label>
-                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required />
-                </div>
 
-                <button type="submit" className="btn" style={{marginTop: '2rem'}} disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Save Transaction'}
-                </button>
+                <div style={{display: 'flex', gap: '0.75rem', marginTop: '2rem'}}>
+                  <button type="submit" className="btn secondary" style={{flex: 1}} disabled={submitting}>
+                    {submitting ? 'Saving...' : 'Save & Close'}
+                  </button>
+                  <button type="button" className="btn" style={{flex: 1}} disabled={submitting} onClick={(e) => handlePreSubmit(e, true)}>
+                    {submitting ? 'Saving...' : 'Save & Add Another'}
+                  </button>
+                </div>
               </form>
             </div>
           )}
@@ -426,7 +455,7 @@ export default function Transactions() {
 
             <div style={{display: 'flex', gap: '1rem'}}>
               <button className="btn secondary" style={{flex: 1}} onClick={() => setConfirmData(null)}>Cancel</button>
-              <button className="btn" style={{flex: 1, background: 'var(--danger-color)'}} onClick={() => executeSubmit(confirmData.rawAmount)}>Continue</button>
+              <button className="btn" style={{flex: 1, background: 'var(--danger-color)'}} onClick={() => executeSubmit(confirmData.rawAmount, confirmData.keepOpen)}>Continue</button>
             </div>
           </div>
         </div>
