@@ -12,7 +12,7 @@ export async function GET() {
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Log!A:H',
+      range: 'Log!A:I',
     });
 
     const rows = response.data.values;
@@ -31,6 +31,7 @@ export async function GET() {
         qty: Number(row[5]) || 1,
         price: Number(String(row[6] || '0').replace(/[^0-9-]/g, '')) || 0,
         amount: Number(amountStr) || 0,
+        place: row[8] || '',
       };
     }).reverse();
 
@@ -44,7 +45,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { date, type, category, amount, description, qty = 1 } = body;
+    const { date, type, category, amount, description, qty = 1, place = '' } = body;
 
     const sheets = await getGoogleSheets();
     const spreadsheetId = getSpreadsheetId();
@@ -56,7 +57,7 @@ export async function POST(request) {
     const id = Date.now().toString();
     const pricePerQty = amount;
     const totalAmount = amount * qty;
-    const newRow = [id, date, type, category, description, qty, pricePerQty, totalAmount];
+    const newRow = [id, date, type, category, description, qty, pricePerQty, totalAmount, place];
 
     // Find the first empty row (in case of gaps from deletions)
     const response = await sheets.spreadsheets.values.get({
@@ -75,7 +76,7 @@ export async function POST(request) {
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `Log!A${insertRowIndex + 1}:H${insertRowIndex + 1}`,
+      range: `Log!A${insertRowIndex + 1}:I${insertRowIndex + 1}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [newRow] },
     });

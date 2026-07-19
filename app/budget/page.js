@@ -17,13 +17,25 @@ export default function Budget() {
 
   const fetchBudgets = async () => {
     try {
-      const res = await fetch('/api/budget');
-      const json = await res.json();
-      if (json.error) setError(json.error);
+      const [budgetRes, catRes] = await Promise.all([
+        fetch('/api/budget'),
+        fetch('/api/categories')
+      ]);
+      
+      const budgetJson = await budgetRes.json();
+      const catJson = await catRes.json();
+      
+      const expenseCats = catJson.data?.Expense || [];
+
+      if (budgetJson.error) setError(budgetJson.error);
       else {
-        const fetchedBudgets = json.data || [];
+        const fetchedBudgets = budgetJson.data || [];
         const fetchedCats = fetchedBudgets.map(b => b.category);
-        const defaultCats = ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Self Development', 'Grooming', 'Other'];
+        
+        // Use dynamically fetched Expense categories as defaults
+        const defaultCats = expenseCats.length > 0 
+          ? expenseCats 
+          : ['Food', 'Transport', 'Entertainment', 'Bills', 'Shopping', 'Health', 'Education', 'Self Development', 'Grooming', 'Other'];
         
         const missing = defaultCats
           .filter(c => !fetchedCats.includes(c))

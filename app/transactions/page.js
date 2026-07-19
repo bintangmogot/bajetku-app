@@ -23,10 +23,12 @@ export default function Transactions() {
     category: '',
     amount: '',
     description: '',
-    qty: 1
+    qty: 1,
+    place: ''
   });
 
   const [quickAmounts, setQuickAmounts] = useState([10000, 20000, 50000, 100000, 500000]);
+  const [quickPlaces, setQuickPlaces] = useState(['Indomaret', 'Alfamart', 'Tokopedia', 'Shopee', 'Gojek', 'Grab']);
 
   const typeConfig = {
     Expense:    { icon: '↑', color: 'var(--danger-color)',  label: 'Expense' },
@@ -41,6 +43,10 @@ export default function Transactions() {
     const saved = localStorage.getItem('bajetkuQuickAmounts');
     if (saved) {
       try { setQuickAmounts(JSON.parse(saved)); } catch (e) {}
+    }
+    const savedPlaces = localStorage.getItem('bajetkuQuickPlaces');
+    if (savedPlaces) {
+      try { setQuickPlaces(JSON.parse(savedPlaces)); } catch (e) {}
     }
     fetchTransactions();
     fetchCategories();
@@ -96,7 +102,7 @@ export default function Transactions() {
   };
 
   const openWizard = () => {
-    setFormData({ date: new Date().toISOString().split('T')[0], type: '', category: '', amount: '', description: '', qty: 1 });
+    setFormData({ date: new Date().toISOString().split('T')[0], type: '', category: '', amount: '', description: '', qty: 1, place: '' });
     setStep(1);
     setShowModal(true);
   };
@@ -134,6 +140,16 @@ export default function Transactions() {
       const newAmounts = [...quickAmounts, amtNum].sort((a,b) => a - b);
       setQuickAmounts(newAmounts);
       localStorage.setItem('bajetkuQuickAmounts', JSON.stringify(newAmounts));
+    }
+  };
+
+  const handleAddCustomPlace = () => {
+    setAlertMessage(null);
+    const placeStr = prompt('Enter a new place template (e.g. Starbucks):');
+    if (placeStr && placeStr.trim()) {
+      const newPlaces = [...new Set([...quickPlaces, placeStr.trim()])];
+      setQuickPlaces(newPlaces);
+      localStorage.setItem('bajetkuQuickPlaces', JSON.stringify(newPlaces));
     }
   };
 
@@ -179,7 +195,7 @@ export default function Transactions() {
       else {
         fetchTransactions();
         if (keepOpen) {
-          setFormData(prev => ({ ...prev, category: '', amount: '', description: '', qty: 1 }));
+          setFormData(prev => ({ ...prev, category: '', amount: '', description: '', qty: 1, place: '' }));
           setStep(3);
         } else {
           setShowModal(false);
@@ -266,7 +282,7 @@ export default function Transactions() {
                     <strong style={{display: 'block', fontSize: '0.95rem', marginBottom: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
                       {tx.description || 'No Title'} {tx.qty > 1 && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>x{tx.qty}</span>}
                     </strong>
-                    <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{tx.date} • {tx.category}</span>
+                    <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{tx.date} • {tx.place ? `${tx.place} • ` : ''}{tx.category}</span>
                   </div>
                 </div>
                 <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0}}>
@@ -364,6 +380,33 @@ export default function Transactions() {
                   <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="What was this for?" required />
                 </div>
                 
+                <div className="form-group">
+                  <label>Where to buy? (Optional)</label>
+                  <input type="text" value={formData.place} onChange={e => setFormData({...formData, place: e.target.value})} placeholder="e.g. Tokopedia, Indomaret..." />
+                  
+                  <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem'}}>
+                    {quickPlaces.map(pl => (
+                      <button 
+                        key={pl} 
+                        type="button" 
+                        className="cat-btn" 
+                        style={{padding: '0.5rem 0.75rem', background: formData.place === pl ? 'var(--primary-color)' : 'var(--surface-color)', color: formData.place === pl ? '#fff' : 'var(--text-primary)'}}
+                        onClick={() => setFormData({...formData, place: pl})}
+                      >
+                        {pl}
+                      </button>
+                    ))}
+                    <button 
+                      type="button" 
+                      className="cat-btn" 
+                      style={{padding: '0.5rem 0.75rem', borderStyle: 'dashed'}}
+                      onClick={handleAddCustomPlace}
+                    >
+                      + Add Place
+                    </button>
+                  </div>
+                </div>
+
                 <div className="form-group">
                   <label>Price per item (IDR)</label>
                   <input 

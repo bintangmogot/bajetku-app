@@ -11,12 +11,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Spreadsheet ID not configured' }, { status: 500 });
     }
 
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'Start!A7:K100',
-    });
+    const [startRes, budgetRes] = await Promise.all([
+      sheets.spreadsheets.values.get({ spreadsheetId, range: 'Start!A7:K100' }),
+      sheets.spreadsheets.values.get({ spreadsheetId, range: 'Budget!A:A' })
+    ]);
 
-    const rows = response.data.values || [];
+    const rows = startRes.data.values || [];
     if (rows.length < 2) {
       return NextResponse.json({ data: getDefaults() });
     }
@@ -42,6 +42,25 @@ export async function GET() {
     const defaults = getDefaults();
     for (const type of Object.keys(result)) {
       if (result[type].length === 0) result[type] = defaults[type];
+    }
+
+    // Merge categories from Budget sheet into Expense
+    const budgetRows = budgetRes.data.values || [];
+    if (budgetRows.length > 1) {
+      for (let i = 1; i < budgetRows.length; i++) {
+        const cat = budgetRows[i][0];
+        if (cat && cat.trim() && !result.Expense.includes(cat.trim())) {
+          result.Expense.push(cat.trim());
+        }
+      }
+    }
+
+    // Ensure essential categories are present
+    const essentialExpenses = ['Education', 'Grooming', 'Entertainment'];
+    for (const cat of essentialExpenses) {
+      if (!result.Expense.includes(cat)) {
+        result.Expense.push(cat);
+      }
     }
 
     return NextResponse.json({ data: result });
