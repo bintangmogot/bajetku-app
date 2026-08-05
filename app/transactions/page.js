@@ -27,8 +27,9 @@ export default function Transactions() {
     place: ''
   });
 
-  const [quickAmounts, setQuickAmounts] = useState([10000, 20000, 50000, 100000, 500000]);
+  const [quickAmounts, setQuickAmounts] = useState([5000, 10000, 15000, 20000, 25000, 50000, 100000, 150000]);
   const [quickPlaces, setQuickPlaces] = useState(['Indomaret', 'Alfamart', 'Tokopedia', 'Shopee', 'Gojek', 'Grab']);
+  const [quickTitles, setQuickTitles] = useState(['Lunch', 'Dinner', 'Coffee', 'Snack', 'Groceries', 'Transport']);
 
   const typeConfig = {
     Expense:    { icon: '↑', color: 'var(--danger-color)',  label: 'Expense' },
@@ -47,6 +48,10 @@ export default function Transactions() {
     const savedPlaces = localStorage.getItem('bajetkuQuickPlaces');
     if (savedPlaces) {
       try { setQuickPlaces(JSON.parse(savedPlaces)); } catch (e) {}
+    }
+    const savedTitles = localStorage.getItem('bajetkuQuickTitles');
+    if (savedTitles) {
+      try { setQuickTitles(JSON.parse(savedTitles)); } catch (e) {}
     }
     fetchTransactions();
     fetchCategories();
@@ -150,6 +155,16 @@ export default function Transactions() {
       const newPlaces = [...new Set([...quickPlaces, placeStr.trim()])];
       setQuickPlaces(newPlaces);
       localStorage.setItem('bajetkuQuickPlaces', JSON.stringify(newPlaces));
+    }
+  };
+
+  const handleAddCustomTitle = () => {
+    setAlertMessage(null);
+    const titleStr = prompt('Enter a new title template (e.g. Movie):');
+    if (titleStr && titleStr.trim()) {
+      const newTitles = [...new Set([...quickTitles, titleStr.trim()])];
+      setQuickTitles(newTitles);
+      localStorage.setItem('bajetkuQuickTitles', JSON.stringify(newTitles));
     }
   };
 
@@ -334,7 +349,7 @@ export default function Transactions() {
               <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>Select the date for this transaction.</p>
               <form onSubmit={handleDateSelect}>
                 <div className="form-group">
-                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required style={{fontSize: '1.25rem', padding: '1rem'}} />
+                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} onKeyDown={e => { if (e.key === 'Enter') handleDateSelect(e); }} autoFocus required style={{fontSize: '1.25rem', padding: '1rem'}} />
                 </div>
                 <button type="submit" className="btn" style={{marginTop: '2rem'}}>Next →</button>
               </form>
@@ -358,86 +373,191 @@ export default function Transactions() {
           {step === 4 && (
             <div className="wizard-step">
               <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(3)}>← Back</button>
+              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>What was it for?</h2>
               
-              <div style={{background: 'var(--surface-color)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', display: 'flex', gap: '1.5rem', flexWrap: 'wrap'}}>
-                <div>
-                  <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>Date</span>
-                  <p style={{fontWeight: '600', margin: 0}}>{formData.date}</p>
-                </div>
-                <div>
-                  <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>Type</span>
-                  <p style={{fontWeight: '600', color: typeConfig[formData.type]?.color, margin: 0}}>{formData.type}</p>
-                </div>
-                <div>
-                  <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>Category</span>
-                  <p style={{fontWeight: '600', margin: 0}}>{formData.category}</p>
+              <div className="form-group" style={{marginTop: '1.5rem'}}>
+                <input 
+                  type="text" 
+                  value={formData.description} 
+                  onChange={e => setFormData({...formData, description: e.target.value})} 
+                  onKeyDown={e => { if (e.key === 'Enter' && formData.description.trim()) setStep(5); }}
+                  placeholder="e.g. Lunch" 
+                  autoFocus 
+                  required 
+                  style={{fontSize: '1.25rem', padding: '1rem'}}
+                />
+              </div>
+              
+              <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem'}}>
+                {quickTitles.map(t => (
+                  <button 
+                    key={t} 
+                    type="button" 
+                    className="cat-btn" 
+                    style={{padding: '0.5rem 0.75rem'}}
+                    onClick={() => {
+                      setFormData({...formData, description: t});
+                      setStep(5);
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+                <button 
+                  type="button" 
+                  className="cat-btn" 
+                  style={{padding: '0.5rem 0.75rem', borderStyle: 'dashed'}}
+                  onClick={handleAddCustomTitle}
+                >
+                  + Add Title
+                </button>
+              </div>
+
+              <button className="btn" style={{marginTop: '2rem'}} onClick={() => setStep(5)} disabled={!formData.description.trim()}>Next →</button>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="wizard-step">
+              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(4)}>← Back</button>
+              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>Where? (Optional)</h2>
+              
+              <div className="form-group" style={{marginTop: '1.5rem'}}>
+                <input 
+                  type="text" 
+                  value={formData.place} 
+                  onChange={e => setFormData({...formData, place: e.target.value})} 
+                  onKeyDown={e => { if (e.key === 'Enter') setStep(6); }}
+                  placeholder="e.g. Tokopedia" 
+                  autoFocus 
+                  style={{fontSize: '1.25rem', padding: '1rem'}}
+                />
+              </div>
+              
+              <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem'}}>
+                {quickPlaces.map(pl => (
+                  <button 
+                    key={pl} 
+                    type="button" 
+                    className="cat-btn" 
+                    style={{padding: '0.5rem 0.75rem'}}
+                    onClick={() => {
+                      setFormData({...formData, place: pl});
+                      setStep(6);
+                    }}
+                  >
+                    {pl}
+                  </button>
+                ))}
+                <button 
+                  type="button" 
+                  className="cat-btn" 
+                  style={{padding: '0.5rem 0.75rem', borderStyle: 'dashed'}}
+                  onClick={handleAddCustomPlace}
+                >
+                  + Add Place
+                </button>
+              </div>
+              
+              <button className="btn" style={{marginTop: '2rem'}} onClick={() => setStep(6)}>Skip / Next →</button>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="wizard-step">
+              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(5)}>← Back</button>
+              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>Quantity</h2>
+              
+              <div className="form-group" style={{marginTop: '1.5rem', textAlign: 'center'}}>
+                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem'}}>
+                  <button type="button" className="cat-btn" style={{padding: '1rem 1.5rem', fontSize: '1.5rem'}} onClick={() => setFormData({...formData, qty: Math.max(1, formData.qty - 1)})}>-</button>
+                  <input 
+                    type="number"
+                    min="1"
+                    value={formData.qty}
+                    onChange={e => setFormData({...formData, qty: Math.max(1, parseInt(e.target.value) || 1)})}
+                    onKeyDown={e => { if (e.key === 'Enter') setStep(7); }}
+                    autoFocus
+                    style={{fontSize: '2rem', padding: '1rem', width: '100px', textAlign: 'center'}}
+                  />
+                  <button type="button" className="cat-btn" style={{padding: '1rem 1.5rem', fontSize: '1.5rem'}} onClick={() => setFormData({...formData, qty: formData.qty + 1})}>+</button>
                 </div>
               </div>
 
-              <form onSubmit={e => handlePreSubmit(e, false)}>
-                <div className="form-group">
-                  <label>Title / Details</label>
-                  <input type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="What was this for?" required />
-                </div>
-                
-                <div className="form-group">
-                  <label>Where to buy? (Optional)</label>
-                  <input type="text" value={formData.place} onChange={e => setFormData({...formData, place: e.target.value})} placeholder="e.g. Tokopedia, Indomaret..." />
-                  
-                  <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem'}}>
-                    {quickPlaces.map(pl => (
-                      <button 
-                        key={pl} 
-                        type="button" 
-                        className="cat-btn" 
-                        style={{padding: '0.5rem 0.75rem', background: formData.place === pl ? 'var(--primary-color)' : 'var(--surface-color)', color: formData.place === pl ? '#fff' : 'var(--text-primary)'}}
-                        onClick={() => setFormData({...formData, place: pl})}
-                      >
-                        {pl}
-                      </button>
-                    ))}
-                    <button 
-                      type="button" 
-                      className="cat-btn" 
-                      style={{padding: '0.5rem 0.75rem', borderStyle: 'dashed'}}
-                      onClick={handleAddCustomPlace}
-                    >
-                      + Add Place
-                    </button>
-                  </div>
-                </div>
+              <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1.5rem', justifyContent: 'center'}}>
+                {[1, 2, 3, 4, 5, 10].map(q => (
+                  <button 
+                    key={q} 
+                    type="button" 
+                    className="cat-btn" 
+                    style={{padding: '0.75rem 1.25rem', fontSize: '1.1rem'}}
+                    onClick={() => {
+                      setFormData({...formData, qty: q});
+                      setStep(7);
+                    }}
+                  >
+                    x{q}
+                  </button>
+                ))}
+              </div>
 
-                <div className="form-group">
-                  <label>Price per item (IDR)</label>
+              <button className="btn" style={{marginTop: '2rem'}} onClick={() => setStep(7)}>Next →</button>
+            </div>
+          )}
+
+          {step === 7 && (
+            <div className="wizard-step">
+              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(6)}>← Back</button>
+              
+              <div style={{background: 'var(--surface-color)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.875rem'}}>
+                <span>{formData.date}</span> • 
+                <span style={{color: typeConfig[formData.type]?.color}}>{formData.type}</span> • 
+                <span>{formData.category}</span> •
+                <strong>{formData.description}</strong> {formData.place && `(${formData.place})`} x{formData.qty}
+              </div>
+
+              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>Price (per item)</h2>
+
+              <form onSubmit={e => handlePreSubmit(e, false)}>
+                <div className="form-group" style={{marginTop: '1.5rem'}}>
                   <input 
                     type="text" 
                     inputMode="numeric"
                     value={formData.amount} 
                     onChange={handleAmountChange} 
+                    onKeyDown={e => { if (e.key === 'Enter' && formData.amount) handlePreSubmit(e, false); }}
                     placeholder="0" 
+                    autoFocus 
                     required 
+                    style={{fontSize: '2rem', padding: '1rem', textAlign: 'center'}}
                   />
                   {formData.qty > 1 && formData.amount && (
-                    <div style={{fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem', fontWeight: 'bold'}}>
+                    <div style={{fontSize: '1rem', color: 'var(--primary-color)', marginTop: '0.75rem', fontWeight: 'bold', textAlign: 'center'}}>
                       Total: {new Intl.NumberFormat('id-ID').format(Number(formData.amount.replace(/\./g, '')) * formData.qty)} IDR
                     </div>
                   )}
-                  <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem'}}>
+                  
+                  <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1.5rem', justifyContent: 'center'}}>
                     {quickAmounts.map(amt => (
                       <button 
                         key={amt} 
                         type="button" 
                         className="cat-btn" 
-                        style={{padding: '0.5rem 0.75rem'}}
-                        onClick={() => setFormData({...formData, amount: new Intl.NumberFormat('id-ID').format(amt)})}
+                        style={{padding: '0.75rem 1rem', fontSize: '1rem', fontWeight: 'bold'}}
+                        onClick={() => {
+                          const formatted = new Intl.NumberFormat('id-ID').format(amt);
+                          setFormData({...formData, amount: formatted});
+                          // Directly submit when clicking quick amount
+                          executeSubmit(amt, false);
+                        }}
                       >
-                        +{amt >= 1000 ? (amt / 1000) + 'k' : amt}
+                        {amt >= 1000 ? (amt / 1000) + 'k' : amt}
                       </button>
                     ))}
                     <button 
                       type="button" 
                       className="cat-btn" 
-                      style={{padding: '0.5rem 0.75rem', borderStyle: 'dashed'}}
+                      style={{padding: '0.75rem 1rem', borderStyle: 'dashed'}}
                       onClick={handleAddCustomAmount}
                     >
                       + Custom
@@ -445,20 +565,11 @@ export default function Transactions() {
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label>Quantity</label>
-                  <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-                    <button type="button" className="cat-btn" style={{padding: '0.5rem 1rem'}} onClick={() => setFormData({...formData, qty: Math.max(1, formData.qty - 1)})}>-</button>
-                    <span style={{fontSize: '1.25rem', fontWeight: 'bold'}}>{formData.qty}</span>
-                    <button type="button" className="cat-btn" style={{padding: '0.5rem 1rem'}} onClick={() => setFormData({...formData, qty: formData.qty + 1})}>+</button>
-                  </div>
-                </div>
-
-                <div style={{display: 'flex', gap: '0.75rem', marginTop: '2rem'}}>
-                  <button type="submit" className="btn secondary" style={{flex: 1}} disabled={submitting}>
+                <div style={{display: 'flex', gap: '0.75rem', marginTop: '2.5rem'}}>
+                  <button type="submit" className="btn" style={{flex: 1}} disabled={submitting || !formData.amount}>
                     {submitting ? 'Saving...' : 'Save & Close'}
                   </button>
-                  <button type="button" className="btn" style={{flex: 1}} disabled={submitting} onClick={(e) => handlePreSubmit(e, true)}>
+                  <button type="button" className="btn secondary" style={{flex: 1}} disabled={submitting || !formData.amount} onClick={(e) => handlePreSubmit(e, true)}>
                     {submitting ? 'Saving...' : 'Save & Add Another'}
                   </button>
                 </div>
