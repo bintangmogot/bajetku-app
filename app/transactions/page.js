@@ -134,6 +134,20 @@ export default function Transactions() {
     setStep(2);
   };
 
+  const handleDateStep = (direction) => {
+    if (dateFilterType === 'month') {
+      const [yearStr, monthStr] = dateFilterValue.split('-');
+      if (!yearStr || !monthStr) return;
+      const d = new Date(Number(yearStr), Number(monthStr) - 1 + direction, 1);
+      setDateFilterValue(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    } else if (dateFilterType === 'date') {
+      const d = new Date(dateFilterValue);
+      if (isNaN(d.getTime())) return;
+      d.setUTCDate(d.getUTCDate() + direction);
+      setDateFilterValue(d.toISOString().split('T')[0]);
+    }
+  };
+
   const handleDateSelect = (e) => {
     if (e) e.preventDefault();
     setStep(3);
@@ -328,13 +342,29 @@ export default function Transactions() {
           </select>
           
           {dateFilterType !== 'all' && (
-            <input 
-              type={dateFilterType} 
-              value={dateFilterValue} 
-              onChange={(e) => setDateFilterValue(e.target.value)}
-              onClick={(e) => { try { e.target.showPicker(); } catch(err){} }}
-              style={{flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', width: '100%'}}
-            />
+            <div style={{display: 'flex', flex: 1, minWidth: 0}}>
+              <button 
+                type="button" 
+                onClick={() => handleDateStep(-1)}
+                style={{padding: '0.75rem', borderRadius: '8px 0 0 8px', border: '1px solid var(--border-color)', borderRight: 'none', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer'}}
+              >
+                ◀
+              </button>
+              <input 
+                type={dateFilterType} 
+                value={dateFilterValue} 
+                onChange={(e) => setDateFilterValue(e.target.value)}
+                onClick={(e) => { try { e.target.showPicker(); } catch(err){} }}
+                style={{flex: 1, padding: '0.75rem', borderRadius: '0', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', width: '100%', minWidth: 0}}
+              />
+              <button 
+                type="button" 
+                onClick={() => handleDateStep(1)}
+                style={{padding: '0.75rem', borderRadius: '0 8px 8px 0', border: '1px solid var(--border-color)', borderLeft: 'none', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer'}}
+              >
+                ▶
+              </button>
+            </div>
           )}
         </div>
         

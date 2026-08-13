@@ -55,6 +55,20 @@ export default function Dashboard() {
     fetchSummary();
   }, [filterType, filterValue]);
 
+  const handleDateStep = (direction) => {
+    if (filterType === 'month') {
+      const [yearStr, monthStr] = filterValue.split('-');
+      if (!yearStr || !monthStr) return;
+      const d = new Date(Number(yearStr), Number(monthStr) - 1 + direction, 1);
+      setFilterValue(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    } else if (filterType === 'date') {
+      const d = new Date(filterValue);
+      if (isNaN(d.getTime())) return;
+      d.setUTCDate(d.getUTCDate() + direction);
+      setFilterValue(d.toISOString().split('T')[0]);
+    }
+  };
+
 
   const handleSetup = async () => {
     setSetupLoading(true);
@@ -135,13 +149,29 @@ export default function Dashboard() {
         </select>
         
         {filterType !== 'all' && (
-          <input 
-            type={filterType} 
-            value={filterValue} 
-            onChange={(e) => setFilterValue(e.target.value)}
-            onClick={(e) => { try { e.target.showPicker(); } catch(err){} }}
-            style={{flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', width: '100%'}}
-          />
+          <div style={{display: 'flex', flex: 1, minWidth: 0}}>
+            <button 
+              type="button" 
+              onClick={() => handleDateStep(-1)}
+              style={{padding: '0.75rem', borderRadius: '8px 0 0 8px', border: '1px solid var(--border-color)', borderRight: 'none', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer'}}
+            >
+              ◀
+            </button>
+            <input 
+              type={filterType} 
+              value={filterValue} 
+              onChange={(e) => setFilterValue(e.target.value)}
+              onClick={(e) => { try { e.target.showPicker(); } catch(err){} }}
+              style={{flex: 1, padding: '0.75rem', borderRadius: '0', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', width: '100%', minWidth: 0}}
+            />
+            <button 
+              type="button" 
+              onClick={() => handleDateStep(1)}
+              style={{padding: '0.75rem', borderRadius: '0 8px 8px 0', border: '1px solid var(--border-color)', borderLeft: 'none', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer'}}
+            >
+              ▶
+            </button>
+          </div>
         )}
       </div>
 
