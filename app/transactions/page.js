@@ -527,40 +527,42 @@ export default function Transactions() {
                   type="text" 
                   value={formData.description} 
                   onChange={e => setFormData({...formData, description: e.target.value})} 
-                  onKeyDown={e => { if (e.key === 'Enter' && formData.description.trim()) setStep(5); }}
-                  placeholder="e.g. Lunch" 
+                  onKeyDown={e => { if (e.key === 'Enter' && formData.description.trim()) setStep(formData.type === 'Expense' ? 5 : 7); }}
+                  placeholder={formData.type === 'Expense' ? "e.g. Lunch" : "e.g. Salary"} 
                   autoFocus 
                   required 
                   style={{fontSize: '1.25rem', padding: '1rem'}}
                 />
               </div>
               
-              <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem'}}>
-                {quickTitles.map(t => (
+              {formData.type === 'Expense' && (
+                <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem'}}>
+                  {quickTitles.map(t => (
+                    <button 
+                      key={t} 
+                      type="button" 
+                      className="cat-btn" 
+                      style={{padding: '0.5rem 0.75rem'}}
+                      onClick={() => {
+                        setFormData({...formData, description: t});
+                        setStep(5);
+                      }}
+                    >
+                      {t}
+                    </button>
+                  ))}
                   <button 
-                    key={t} 
                     type="button" 
                     className="cat-btn" 
-                    style={{padding: '0.5rem 0.75rem'}}
-                    onClick={() => {
-                      setFormData({...formData, description: t});
-                      setStep(5);
-                    }}
+                    style={{padding: '0.5rem 0.75rem', borderStyle: 'dashed'}}
+                    onClick={handleAddCustomTitle}
                   >
-                    {t}
+                    + Add Title
                   </button>
-                ))}
-                <button 
-                  type="button" 
-                  className="cat-btn" 
-                  style={{padding: '0.5rem 0.75rem', borderStyle: 'dashed'}}
-                  onClick={handleAddCustomTitle}
-                >
-                  + Add Title
-                </button>
-              </div>
+                </div>
+              )}
 
-              <button className="btn" style={{marginTop: '2rem'}} onClick={() => setStep(5)} disabled={!formData.description.trim()}>Next →</button>
+              <button className="btn" style={{marginTop: '2rem'}} onClick={() => setStep(formData.type === 'Expense' ? 5 : 7)} disabled={!formData.description.trim()}>Next →</button>
             </div>
           )}
 
@@ -654,16 +656,16 @@ export default function Transactions() {
 
           {step === 7 && (
             <div className="wizard-step">
-              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(6)}>← Back</button>
+              <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(formData.type === 'Expense' ? 6 : 4)}>← Back</button>
               
               <div style={{background: 'var(--surface-color)', padding: '0.75rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.875rem'}}>
                 <span>{formData.date}</span> • 
                 <span style={{color: typeConfig[formData.type]?.color}}>{formData.type}</span> • 
                 <span>{formData.category}</span> •
-                <strong>{formData.description}</strong> {formData.place && `(${formData.place})`} x{formData.qty}
+                <strong>{formData.description}</strong> {formData.type === 'Expense' && formData.place && `(${formData.place})`} {formData.type === 'Expense' && `x${formData.qty}`}
               </div>
 
-              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>Price (per item)</h2>
+              <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>{formData.type === 'Expense' ? 'Price (per item)' : 'Amount'}</h2>
 
               <form onSubmit={e => handlePreSubmit(e, false)}>
                 <div className="form-group" style={{marginTop: '1.5rem'}}>
