@@ -16,9 +16,7 @@ export default function Dashboard() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  useEffect(() => {
-    fetchSummary();
-  }, [filterType, filterValue]);
+
 
   const fetchSummary = async () => {
     try {
@@ -52,6 +50,11 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSummary();
+  }, [filterType, filterValue]);
+
 
   const handleSetup = async () => {
     setSetupLoading(true);

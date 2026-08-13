@@ -5,9 +5,7 @@ export default function Savings() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+
 
   const fetchData = async () => {
     try {
@@ -20,6 +18,11 @@ export default function Savings() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);

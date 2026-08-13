@@ -11,9 +11,7 @@ export default function Budget() {
   const [promptData, setPromptData] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
-  useEffect(() => {
-    fetchBudgets();
-  }, []);
+
 
   const fetchBudgets = async () => {
     try {
@@ -49,6 +47,11 @@ export default function Budget() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchBudgets();
+  }, []);
+
 
   const handleAmountChange = (index, value) => {
     const rawValue = value.replace(/\D/g, '');

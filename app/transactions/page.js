@@ -16,6 +16,12 @@ export default function Transactions() {
   const [alertMessage, setAlertMessage] = useState(null);
   const [allCategories, setAllCategories] = useState({});
   const [filterType, setFilterType] = useState('All');
+  const [dateFilterType, setDateFilterType] = useState('month');
+  const [dateFilterValue, setDateFilterValue] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [sortOrder, setSortOrder] = useState('desc');
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -40,33 +46,7 @@ export default function Transactions() {
     Investment: { icon: '📈', color: '#3498db',             label: 'Investment' },
   };
 
-  useEffect(() => {
-    const saved = localStorage.getItem('bajetkuQuickAmounts');
-    if (saved) {
-      try { setQuickAmounts(JSON.parse(saved)); } catch (e) {}
-    }
-    const savedPlaces = localStorage.getItem('bajetkuQuickPlaces');
-    if (savedPlaces) {
-      try { setQuickPlaces(JSON.parse(savedPlaces)); } catch (e) {}
-    }
-    const savedTitles = localStorage.getItem('bajetkuQuickTitles');
-    if (savedTitles) {
-      try { setQuickTitles(JSON.parse(savedTitles)); } catch (e) {}
-    }
-    fetchTransactions();
-    fetchCategories();
-    fetchBudgets();
-    
-    const handleOpenWizard = () => openWizard();
-    window.addEventListener('openTransactionWizard', handleOpenWizard);
-    
-    if (sessionStorage.getItem('pendingNewTransaction')) {
-      sessionStorage.removeItem('pendingNewTransaction');
-      setTimeout(() => openWizard(), 50);
-    }
-    
-    return () => window.removeEventListener('openTransactionWizard', handleOpenWizard);
-  }, []);
+
 
   const fetchTransactions = async () => {
     try {
@@ -111,6 +91,34 @@ export default function Transactions() {
     setStep(1);
     setShowModal(true);
   };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('bajetkuQuickAmounts');
+    if (saved) {
+      try { setQuickAmounts(JSON.parse(saved)); } catch (e) {}
+    }
+    const savedPlaces = localStorage.getItem('bajetkuQuickPlaces');
+    if (savedPlaces) {
+      try { setQuickPlaces(JSON.parse(savedPlaces)); } catch (e) {}
+    }
+    const savedTitles = localStorage.getItem('bajetkuQuickTitles');
+    if (savedTitles) {
+      try { setQuickTitles(JSON.parse(savedTitles)); } catch (e) {}
+    }
+    fetchTransactions();
+    fetchCategories();
+    fetchBudgets();
+    
+    const handleOpenWizard = () => openWizard();
+    window.addEventListener('openTransactionWizard', handleOpenWizard);
+    
+    if (sessionStorage.getItem('pendingNewTransaction')) {
+      sessionStorage.removeItem('pendingNewTransaction');
+      setTimeout(() => openWizard(), 50);
+    }
+    
+    return () => window.removeEventListener('openTransactionWizard', handleOpenWizard);
+  }, []);
 
   const handleTypeSelect = (type) => {
     setFormData({ ...formData, type });
@@ -246,14 +254,31 @@ export default function Transactions() {
 
   const categories = allCategories[formData.type] || [];
   const typeList = Object.keys(typeConfig);
-  const filteredTransactions = filterType === 'All' ? transactions : transactions.filter(t => t.type === filterType);
+  
+  let filteredTransactions = filterType === 'All' ? transactions : transactions.filter(t => t.type === filterType);
+  
+  if (dateFilterType === 'month') {
+    filteredTransactions = filteredTransactions.filter(t => t.date.startsWith(dateFilterValue));
+  } else if (dateFilterType === 'date') {
+    filteredTransactions = filteredTransactions.filter(t => t.date === dateFilterValue);
+  }
+  
+  filteredTransactions.sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    if (dateA !== dateB) {
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    }
+    // Fallback to maintain stable sort when dates are identical
+    return 0;
+  });
 
   return (
     <div>
       <h1 style={{marginBottom: '1rem'}}>Transactions</h1>
 
       {/* Filter Chips */}
-      <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem'}}>
+      <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem'}}>
         {['All', ...typeList].map(t => (
           <button 
             key={t}
@@ -273,6 +298,45 @@ export default function Transactions() {
             {t === 'All' ? '🔍 All' : `${typeConfig[t].icon} ${t}`}
           </button>
         ))}
+      </div>
+
+      {/* Date Filter & Sort */}
+      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap'}}>
+        <div style={{display: 'flex', gap: '0.5rem', flex: 1, minWidth: '200px'}}>
+          <select 
+            value={dateFilterType} 
+            onChange={(e) => {
+              setDateFilterType(e.target.value);
+              const now = new Date();
+              if (e.target.value === 'month') setDateFilterValue(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+              if (e.target.value === 'date') setDateFilterValue(now.toISOString().split('T')[0]);
+            }}
+            style={{padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer'}}
+          >
+            <option value="month">Monthly</option>
+            <option value="date">Daily</option>
+            <option value="all">All Time</option>
+          </select>
+          
+          {dateFilterType !== 'all' && (
+            <input 
+              type={dateFilterType} 
+              value={dateFilterValue} 
+              onChange={(e) => setDateFilterValue(e.target.value)}
+              onClick={(e) => { try { e.target.showPicker(); } catch(err){} }}
+              style={{flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', width: '100%'}}
+            />
+          )}
+        </div>
+        
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          style={{padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', minWidth: '120px'}}
+        >
+          <option value="desc">Newest First</option>
+          <option value="asc">Oldest First</option>
+        </select>
       </div>
 
       {loading && !transactions.length ? (
