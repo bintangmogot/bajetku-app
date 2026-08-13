@@ -17,14 +17,23 @@ export default function Transactions() {
   const [allCategories, setAllCategories] = useState({});
   const [filterType, setFilterType] = useState('All');
   const [dateFilterType, setDateFilterType] = useState('month');
+  const getLocalDateStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   const [dateFilterValue, setDateFilterValue] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [sortOrder, setSortOrder] = useState('desc');
+  const [calendarDate, setCalendarDate] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
 
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateStr(),
     type: '',
     category: '',
     amount: '',
@@ -87,7 +96,7 @@ export default function Transactions() {
   };
 
   const openWizard = () => {
-    setFormData({ date: new Date().toISOString().split('T')[0], type: '', category: '', amount: '', description: '', qty: 1, place: '' });
+    setFormData({ date: getLocalDateStr(), type: '', category: '', amount: '', description: '', qty: 1, place: '' });
     setStep(1);
     setShowModal(true);
   };
@@ -126,7 +135,7 @@ export default function Transactions() {
   };
 
   const handleDateSelect = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setStep(3);
   };
 
@@ -309,7 +318,7 @@ export default function Transactions() {
               setDateFilterType(e.target.value);
               const now = new Date();
               if (e.target.value === 'month') setDateFilterValue(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
-              if (e.target.value === 'date') setDateFilterValue(now.toISOString().split('T')[0]);
+              if (e.target.value === 'date') setDateFilterValue(getLocalDateStr());
             }}
             style={{padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer'}}
           >
@@ -411,12 +420,56 @@ export default function Transactions() {
               <button className="btn secondary" style={{padding: '0.5rem', width: 'auto', marginBottom: '1rem'}} onClick={() => setStep(1)}>← Back</button>
               <h2 style={{color: 'var(--text-primary)', marginBottom: '0.5rem'}}>When?</h2>
               <p style={{color: 'var(--text-secondary)', marginBottom: '1.5rem'}}>Select the date for this transaction.</p>
-              <form onSubmit={handleDateSelect}>
-                <div className="form-group">
-                  <input type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} onKeyDown={e => { if (e.key === 'Enter') handleDateSelect(e); }} autoFocus required style={{fontSize: '1.25rem', padding: '1rem'}} />
+              
+              <div style={{background: 'var(--surface-color)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border-color)'}}>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+                  <button type="button" onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))} style={{background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', padding: '0.4rem 0.8rem'}}>◀</button>
+                  <div style={{fontWeight: 'bold', fontSize: '1.1rem'}}>
+                    {calendarDate.toLocaleString('default', { month: 'long' })} {calendarDate.getFullYear()}
+                  </div>
+                  <button type="button" onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))} style={{background: 'var(--background-color)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer', padding: '0.4rem 0.8rem'}}>▶</button>
                 </div>
-                <button type="submit" className="btn" style={{marginTop: '2rem'}}>Next →</button>
-              </form>
+                
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', textAlign: 'center'}}>
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => <div key={d} style={{fontSize: '0.8rem', color: 'var(--text-secondary)', paddingBottom: '0.5rem'}}>{d}</div>)}
+                  
+                  {Array.from({ length: new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1).getDay() }).map((_, i) => <div key={`empty-${i}`} />)}
+                  
+                  {Array.from({ length: new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                    const day = i + 1;
+                    const dateStr = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const isSelected = formData.date === dateStr;
+                    const isToday = getLocalDateStr() === dateStr;
+                    
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, date: dateStr });
+                          setStep(3);
+                        }}
+                        style={{
+                          padding: '0.75rem 0',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: isSelected ? 'var(--primary-color)' : (isToday ? 'var(--background-color)' : 'transparent'),
+                          color: isSelected ? '#fff' : (isToday ? 'var(--primary-color)' : 'var(--text-primary)'),
+                          fontWeight: isSelected || isToday ? 'bold' : 'normal',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: isToday && !isSelected ? '1px solid var(--primary-color)' : '1px solid transparent',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
